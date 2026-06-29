@@ -2817,6 +2817,375 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 .wp-two { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
 @media(max-width:700px){ .wp-two{grid-template-columns:1fr} }
 
+/* ─ Tasks (beta) ───────────────────────
+   One store, three views: Today / Week / List.
+   Layout tokens follow the CCNP shell pattern. */
+:root {
+  --tsk-max-w: 1480px;
+  --tsk-pad-x: clamp(20px, 4vw, 56px);
+  --tsk-row-h: 36px;
+}
+.tsk-wrap {
+  width: 100%; max-width: var(--tsk-max-w);
+  margin: 0 auto;
+  padding: 24px var(--tsk-pad-x) 64px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column;
+}
+.tsk-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.tsk-head-l { min-width: 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.tsk-title { font-family: 'Inter Tight', ui-sans-serif, sans-serif; font-size: 1.55rem; font-weight: 500; letter-spacing: -0.025em; color: var(--text); }
+.tsk-beta {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  padding: 2px 6px; border-radius: 3px;
+}
+.tsk-head-r { display: flex; align-items: center; gap: 12px; }
+.tsk-sync {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em;
+  display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim);
+}
+.tsk-sync::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sage, #4ade80); }
+.tsk-sync[data-status="saving"] { color: var(--text-sec); }
+.tsk-sync[data-status="saving"]::before { background: var(--sulfur, #fbbf24); }
+.tsk-sync[data-status="error"] { color: var(--red, #f25458); }
+.tsk-sync[data-status="error"]::before { background: var(--red, #f25458); }
+
+/* View segmented control */
+.tsk-view-seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+.tsk-view-btn { padding: 6px 18px; background: none; border: none; color: var(--text-sec); font-size: 0.78rem; font-weight: 500; cursor: pointer; font-family: inherit; transition: all var(--tr); border-right: 1px solid var(--border); display: inline-flex; align-items: center; gap: 6px; }
+.tsk-view-btn:last-child { border-right: none; }
+.tsk-view-btn:hover { color: var(--text); }
+.tsk-view-btn.on { background: var(--surface2); color: var(--text); }
+.tsk-view-btn-kbd { font-family: var(--mono); font-size: 9.5px; color: var(--text-dim); padding: 1px 4px; border: 1px solid var(--border); border-radius: 3px; }
+
+/* Quick-add bar — present on every view */
+.tsk-qadd { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; padding: 9px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); transition: border-color var(--tr); }
+.tsk-qadd:focus-within { border-color: var(--accent); }
+.tsk-qadd-ic { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1; }
+.tsk-qadd-inp { flex: 1; background: none; border: none; outline: none; font-family: inherit; font-size: 13px; color: var(--text); }
+.tsk-qadd-inp::placeholder { color: var(--text-dim); }
+.tsk-qadd-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+/* Search bar (toggled with /) */
+.tsk-search { display: none; margin-bottom: 14px; }
+.tsk-search.on { display: flex; }
+
+/* Section / day groups */
+.tsk-sec { margin-bottom: 22px; }
+.tsk-sec-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0 10px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.tsk-sec-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-dim); }
+.tsk-sec-name { font-size: 0.85rem; font-weight: 500; color: var(--text); letter-spacing: -0.01em; }
+.tsk-sec-count { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+.tsk-sec-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity var(--tr); }
+.tsk-sec:hover .tsk-sec-acts, .tsk-sec-head:hover .tsk-sec-acts { opacity: 1; }
+.tsk-sec-act-btn { padding: 3px 8px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-dim); font-size: 10.5px; cursor: pointer; font-family: inherit; transition: all var(--tr); }
+.tsk-sec-act-btn:hover { color: var(--text); border-color: var(--line-3, var(--border)); background: var(--surface2); }
+.tsk-sec-act-btn.danger:hover { color: var(--red); border-color: rgba(242,84,91,0.35); }
+.tsk-sec.is-collapsed .tsk-task-list, .tsk-sec.is-collapsed .tsk-sec-foot { display: none; }
+.tsk-sec-chev { font-size: 0.95rem; color: var(--text-dim); transition: transform var(--tr); width: 12px; text-align: center; cursor: pointer; user-select: none; }
+.tsk-sec.is-collapsed .tsk-sec-chev { transform: rotate(-90deg); }
+.tsk-sec-overdue .tsk-sec-name { color: var(--red); }
+.tsk-sec-overdue .tsk-sec-dot { background: var(--red); }
+
+/* Task row */
+.tsk-task-list { display: flex; flex-direction: column; gap: 1px; }
+.tsk-task {
+  display: grid;
+  grid-template-columns: 18px 18px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px;
+  min-height: var(--tsk-row-h);
+  border-radius: var(--r-sm);
+  transition: background var(--tr);
+  cursor: pointer;
+  position: relative;
+}
+.tsk-task:hover { background: var(--surface2); }
+.tsk-task.is-selected { background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.tsk-task.is-done .tsk-task-title { color: var(--text-dim); text-decoration: line-through; }
+.tsk-task.dragging { opacity: 0.4; }
+.tsk-task.drag-over-top::before, .tsk-task.drag-over-bot::after {
+  content: ''; position: absolute; left: 8px; right: 8px; height: 2px;
+  background: var(--accent); border-radius: 2px; pointer-events: none; z-index: 2;
+}
+.tsk-task.drag-over-top::before { top: -1px; }
+.tsk-task.drag-over-bot::after { bottom: -1px; }
+.tsk-task-handle {
+  color: var(--text-dim); font-size: 12px; line-height: 1; opacity: 0; cursor: grab;
+  user-select: none; transition: opacity var(--tr); text-align: center;
+}
+.tsk-task:hover .tsk-task-handle { opacity: 0.6; }
+.tsk-task-chk {
+  width: 16px; height: 16px; border: 1.5px solid var(--border-h); border-radius: 4px;
+  background: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--tr);
+}
+.tsk-task-chk:hover { border-color: var(--text-sec); }
+.tsk-task-chk.on { background: var(--accent); border-color: var(--accent); }
+.tsk-task-chk.on::after { content: '✓'; font-size: 10px; color: var(--bg); font-weight: 700; line-height: 1; }
+.tsk-task-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tsk-task-title { font-size: 13px; line-height: 1.4; color: var(--text); word-break: break-word; }
+.tsk-task-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--text-dim); }
+.tsk-meta-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px;
+  border-radius: 999px; font-size: 10.5px; font-weight: 500;
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  border: 1px solid color-mix(in oklab, currentColor 22%, transparent);
+}
+.tsk-meta-sub, .tsk-meta-section, .tsk-meta-time, .tsk-meta-date, .tsk-meta-link, .tsk-meta-recur {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.tsk-meta-date.is-overdue { color: var(--red); }
+.tsk-task-acts {
+  display: inline-flex; align-items: center; gap: 4px;
+  opacity: 0; transition: opacity var(--tr);
+}
+.tsk-task:hover .tsk-task-acts { opacity: 1; }
+.tsk-act-btn {
+  width: 24px; height: 24px; padding: 0; background: none; border: 1px solid transparent;
+  border-radius: 4px; color: var(--text-dim); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1;
+  transition: all var(--tr);
+}
+.tsk-act-btn:hover { color: var(--text); border-color: var(--border); background: var(--surface); }
+.tsk-act-btn.starred { color: var(--sulfur, #fbbf24); opacity: 1 !important; }
+
+/* Subtask collapse */
+.tsk-subs { padding-left: 36px; display: flex; flex-direction: column; gap: 1px; margin-top: -1px; }
+.tsk-sec-foot { padding: 6px 0 0; }
+.tsk-show-done {
+  background: none; border: none; padding: 4px 0; font-family: inherit;
+  font-size: 11px; color: var(--text-dim); cursor: pointer;
+  transition: color var(--tr);
+}
+.tsk-show-done:hover { color: var(--text); }
+
+/* Week view grid */
+.tsk-week {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 22px;
+}
+.tsk-week-col {
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  min-height: 220px;
+}
+.tsk-week-col.is-today { background: color-mix(in oklab, var(--accent) 6%, var(--surface)); }
+.tsk-week-col.drag-over { background: color-mix(in oklab, var(--accent) 14%, var(--surface)); }
+.tsk-week-head { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 10px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tsk-week-dow { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+.tsk-week-col.is-today .tsk-week-dow { color: var(--accent); }
+.tsk-week-num { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-sec); font-variant-numeric: tabular-nums; }
+.tsk-week-body { flex: 1; display: flex; flex-direction: column; gap: 1px; padding: 4px; overflow-y: auto; max-height: 360px; }
+.tsk-week-task {
+  padding: 5px 7px; border-radius: 4px; background: var(--bg);
+  border-left: 2px solid var(--text-dim);
+  cursor: pointer; transition: background var(--tr);
+  position: relative;
+}
+.tsk-week-task:hover { background: var(--surface2); }
+.tsk-week-task.is-done { opacity: 0.5; text-decoration: line-through; }
+.tsk-week-task.dragging { opacity: 0.4; }
+.tsk-week-task-title { font-size: 11.5px; color: var(--text); line-height: 1.35; word-break: break-word; }
+.tsk-week-task-meta { font-family: var(--mono); font-size: 9.5px; color: var(--text-dim); margin-top: 1px; }
+.tsk-week-add {
+  margin: 4px; padding: 4px; background: none; border: 1px dashed transparent;
+  border-radius: 4px; color: var(--text-dim); font-size: 10.5px;
+  font-family: inherit; cursor: pointer; text-align: center;
+  transition: all var(--tr);
+}
+.tsk-week-col:hover .tsk-week-add { border-color: var(--border); }
+.tsk-week-add:hover { color: var(--text); border-color: var(--line-3, var(--border)); background: var(--surface2); }
+
+/* Today header (week-of label + nav for week view) */
+.tsk-period-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.tsk-period-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.04em; }
+.tsk-period-nav { display: inline-flex; gap: 4px; margin-left: auto; }
+.tsk-period-btn { padding: 3px 10px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-sec); font-family: inherit; font-size: 11.5px; cursor: pointer; transition: all var(--tr); }
+.tsk-period-btn:hover { color: var(--text); border-color: var(--line-3, var(--border)); background: var(--surface2); }
+
+/* Pick-from-list dialog */
+.tsk-picker { display: none; }
+.tsk-picker.open { display: block; position: absolute; top: 100%; right: 0; margin-top: 4px; width: 320px; max-height: 380px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: 0 12px 30px rgba(0,0,0,0.4); z-index: 50; padding: 6px; }
+.tsk-picker-head { padding: 6px 8px; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+.tsk-picker-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12.5px; color: var(--text); transition: background var(--tr); }
+.tsk-picker-row:hover { background: var(--surface2); }
+.tsk-picker-row-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-left: auto; }
+.tsk-picker-empty { padding: 10px 8px; font-size: 11.5px; color: var(--text-dim); }
+
+/* Bulk action bar (multi-select) */
+.tsk-bulk {
+  display: none; position: sticky; bottom: 14px; left: 0; right: 0;
+  margin: 12px auto 0; max-width: 720px;
+  align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--surface);
+  border: 1px solid var(--accent); border-radius: var(--r);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.45);
+  z-index: 20;
+}
+.tsk-bulk.on { display: flex; }
+.tsk-bulk-count { font-size: 12px; color: var(--text); font-weight: 500; }
+.tsk-bulk-act { padding: 5px 12px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-sec); font-family: inherit; font-size: 11.5px; cursor: pointer; transition: all var(--tr); }
+.tsk-bulk-act:hover { color: var(--text); border-color: var(--line-3, var(--border)); background: var(--surface2); }
+.tsk-bulk-act.danger:hover { color: var(--red); border-color: rgba(242,84,91,0.4); }
+.tsk-bulk-spacer { flex: 1; }
+
+/* Daily review nudge banner */
+.tsk-nudge {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  background: color-mix(in oklab, var(--sulfur, #fbbf24) 12%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--sulfur, #fbbf24) 32%, var(--border));
+  border-radius: var(--r); margin-bottom: 16px;
+}
+.tsk-nudge-text { font-size: 12.5px; color: var(--text); flex: 1; }
+.tsk-nudge-dismiss { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 14px; padding: 0 4px; }
+.tsk-nudge-dismiss:hover { color: var(--text); }
+
+/* Empty state */
+.tsk-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 16px; color: var(--text-dim); text-align: center; }
+.tsk-empty-icon { font-size: 22px; opacity: 0.6; }
+.tsk-empty-text { font-size: 13px; }
+.tsk-empty-cta { padding: 6px 14px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-sec); font-family: inherit; font-size: 12px; cursor: pointer; transition: all var(--tr); }
+.tsk-empty-cta:hover { color: var(--text); border-color: var(--accent); background: var(--surface); }
+
+/* Modal — task editor */
+#tskModalWrap { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 24px; }
+#tskModalWrap.open { display: flex; }
+.tsk-modal { width: 100%; max-width: 640px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; max-height: 90vh; overflow-y: auto; }
+.tsk-modal-head { display: flex; align-items: center; gap: 10px; }
+.tsk-modal-title-inp { flex: 1; background: none; border: none; outline: none; font-family: 'Inter Tight', ui-sans-serif, sans-serif; font-size: 1.15rem; font-weight: 500; color: var(--text); padding: 4px 0; }
+.tsk-modal-title-inp::placeholder { color: var(--text-dim); }
+.tsk-modal-x { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 18px; padding: 4px 8px; }
+.tsk-modal-x:hover { color: var(--text); }
+.tsk-modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .tsk-modal-grid { grid-template-columns: 1fr; } }
+.tsk-f-group { display: flex; flex-direction: column; gap: 5px; }
+.tsk-f-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+.tsk-f-input, .tsk-f-select {
+  padding: 7px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text); font-family: inherit; font-size: 12.5px;
+  outline: none; transition: border-color var(--tr);
+}
+.tsk-f-input:focus, .tsk-f-select:focus { border-color: var(--accent); }
+.tsk-f-select { -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2399999f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 8px center; background-size: 11px;
+  padding-right: 28px; cursor: pointer;
+}
+.tsk-tag-picker { display: flex; flex-wrap: wrap; gap: 5px; }
+.tsk-tag-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 500; cursor: pointer; font-family: inherit;
+  border: 1px solid currentColor; opacity: 0.45; transition: all var(--tr);
+  background: none;
+}
+.tsk-tag-chip.on { opacity: 1; background: color-mix(in oklab, currentColor 12%, transparent); }
+.tsk-tag-chip:hover { opacity: 1; }
+.tsk-tag-add {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; cursor: pointer; font-family: inherit;
+  border: 1px dashed var(--border); color: var(--text-dim);
+  background: none;
+}
+.tsk-tag-add:hover { color: var(--text); border-color: var(--line-3, var(--border)); }
+.tsk-tag-new-row { display: flex; gap: 6px; margin-top: 6px; }
+.tsk-tag-new-row.hidden { display: none; }
+
+/* Modal subtasks + checklist */
+.tsk-mlist { display: flex; flex-direction: column; gap: 3px; }
+.tsk-mlist-row {
+  display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px;
+  border-radius: 4px; transition: background var(--tr);
+}
+.tsk-mlist-row:hover { background: var(--surface2); }
+.tsk-mlist-row.is-done .tsk-mlist-text { text-decoration: line-through; color: var(--text-dim); }
+.tsk-mlist-chk {
+  width: 14px; height: 14px; flex-shrink: 0; margin-top: 3px;
+  border: 1.5px solid var(--border-h); border-radius: 3px;
+  background: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--tr);
+}
+.tsk-mlist-chk:hover { border-color: var(--text-sec); }
+.tsk-mlist-chk.on { background: var(--accent); border-color: var(--accent); }
+.tsk-mlist-chk.on::after { content: '✓'; font-size: 8px; color: var(--bg); font-weight: 700; line-height: 1; }
+.tsk-mlist-text {
+  flex: 1; min-width: 0; padding: 1px 0;
+  font-size: 12.5px; line-height: 1.4; color: var(--text);
+  background: none; border: none; outline: none; resize: none;
+  font-family: inherit; word-break: break-word;
+}
+.tsk-mlist-link {
+  background: none; border: none; cursor: pointer; color: var(--text-dim);
+  padding: 2px 4px; opacity: 0; transition: opacity var(--tr), color var(--tr);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tsk-mlist-row:hover .tsk-mlist-link { opacity: 1; }
+.tsk-mlist-link.has-url { color: var(--accent); opacity: 1; }
+.tsk-mlist-del {
+  background: none; border: none; cursor: pointer; color: var(--text-dim);
+  font-size: 11px; padding: 2px 4px; opacity: 0; transition: opacity var(--tr), color var(--tr);
+}
+.tsk-mlist-row:hover .tsk-mlist-del { opacity: 1; }
+.tsk-mlist-del:hover { color: var(--red); }
+.tsk-mlist-add {
+  background: none; border: 1px dashed var(--border); border-radius: var(--r-sm);
+  padding: 5px 12px; color: var(--text-sec); font-family: inherit; font-size: 11.5px;
+  cursor: pointer; align-self: flex-start;
+  transition: all var(--tr);
+}
+.tsk-mlist-add:hover { color: var(--text); border-color: var(--line-3, var(--border)); }
+.tsk-link-edit-row { display: flex; gap: 5px; margin-left: 22px; margin-top: -1px; margin-bottom: 4px; }
+.tsk-link-edit-row input { flex: 1; padding: 5px 9px; background: var(--bg); border: 1px solid var(--accent); border-radius: var(--r-sm); color: var(--text); font-family: inherit; font-size: 11.5px; outline: none; }
+.tsk-link-edit-btn { padding: 5px 10px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-sec); font-family: inherit; font-size: 11px; cursor: pointer; }
+.tsk-link-edit-btn.save { background: var(--accent); border-color: var(--accent); color: var(--bg, #1a1a1a); }
+
+/* Modal foot */
+.tsk-modal-foot { display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px; margin-top: 6px; border-top: 1px solid var(--border); }
+.tsk-modal-foot .tsk-modal-foot-l { margin-right: auto; }
+.tsk-modal-btn { padding: 7px 14px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--text-sec); font-family: inherit; font-size: 12px; cursor: pointer; transition: all var(--tr); }
+.tsk-modal-btn:hover { color: var(--text); border-color: var(--line-3, var(--border)); }
+.tsk-modal-btn.danger:hover { color: var(--red); border-color: rgba(242,84,91,0.4); }
+.tsk-modal-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg, #1a1a1a); }
+.tsk-modal-btn.primary:hover { filter: brightness(1.1); }
+
+/* Snooze menu (small popover) */
+.tsk-snooze-menu {
+  position: absolute; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 4px; z-index: 50;
+  display: none; min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.tsk-snooze-menu.open { display: block; }
+.tsk-snooze-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-sec); transition: background var(--tr); }
+.tsk-snooze-item:hover { background: var(--surface2); color: var(--text); }
+.tsk-snooze-item-kbd { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+
+/* Tasks tab on mobile */
+@media (max-width: 768px) {
+  .tsk-wrap { padding: 18px 14px 84px; }
+  .tsk-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .tsk-week { grid-template-columns: 1fr; }
+  .tsk-week-col { min-height: auto; }
+}
+
 /* ─ CCNP Study ─────────────────────────
    Layout tokens — every section/row uses these. Don't override per-component.
    Architecture is the visual reference. */
@@ -3103,6 +3472,7 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
     </div>
     <nav class="sb-nav">
       <button class="nav-item active" onclick="switchTab('home')" id="nav-home"><span class="nav-icon"><i data-lucide="home"></i></span><span class="nav-label">Home</span></button>
+      <button class="nav-item" onclick="switchTab('tsk')" id="nav-tsk"><span class="nav-icon"><i data-lucide="check-square"></i></span><span class="nav-label">Tasks</span><span class="nav-badge">beta</span></button>
       <button class="nav-item" onclick="switchTab('calendar')" id="nav-calendar"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Calendar</span></button>
       <button class="nav-item" onclick="switchTab('training')" id="nav-training"><span class="nav-icon"><i data-lucide="dumbbell"></i></span><span class="nav-label">Training</span></button>
       <button class="nav-item" onclick="switchTab('food')" id="nav-food"><span class="nav-icon"><i data-lucide="utensils"></i></span><span class="nav-label">Food</span></button>
@@ -3146,6 +3516,11 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
       <div class="home-wrap">
         <div class="home-shell" id="homeShell"></div>
       </div>
+    </section>
+
+    <!-- ── Tasks (beta) ── -->
+    <section class="tab-section" id="tab-tsk">
+      <div class="tsk-wrap" id="tskWrap"></div>
     </section>
 
     <!-- ── Calendar ── -->
@@ -4294,6 +4669,72 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 </div>
 
 <div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Tasks modal -->
+<div id="tskModalWrap" onclick="if(event.target===this)tskCloseModal()">
+  <div class="tsk-modal" id="tskModal">
+    <div class="tsk-modal-head">
+      <button class="tsk-task-chk" id="tskMChk" type="button" onclick="tskMToggleDone()" title="Toggle done"></button>
+      <input class="tsk-modal-title-inp" id="tskMTitle" type="text" placeholder="Task title…" autocomplete="off">
+      <button class="tsk-act-btn" id="tskMStar" type="button" onclick="tskMToggleStar()" title="Star">★</button>
+      <button class="tsk-modal-x" type="button" onclick="tskCloseModal()">✕</button>
+    </div>
+    <div class="tsk-modal-grid">
+      <div class="tsk-f-group">
+        <label class="tsk-f-label">Section</label>
+        <select class="tsk-f-select" id="tskMSection"></select>
+      </div>
+      <div class="tsk-f-group">
+        <label class="tsk-f-label">Schedule for</label>
+        <input class="tsk-f-input" id="tskMDate" type="date">
+      </div>
+      <div class="tsk-f-group">
+        <label class="tsk-f-label">Time (optional)</label>
+        <input class="tsk-f-input" id="tskMTime" type="time">
+      </div>
+      <div class="tsk-f-group">
+        <label class="tsk-f-label">Recurring</label>
+        <select class="tsk-f-select" id="tskMRecur">
+          <option value="">Never</option>
+          <option value="daily">Every day</option>
+          <option value="weekdays">Every weekday (Mon–Fri)</option>
+          <option value="weekly">Every week (same DOW)</option>
+          <option value="biweekly">Every 2 weeks</option>
+          <option value="monthly">Every month (same date)</option>
+        </select>
+      </div>
+    </div>
+    <div class="tsk-f-group">
+      <label class="tsk-f-label">Tags</label>
+      <div class="tsk-tag-picker" id="tskMTagPicker"></div>
+      <div class="tsk-tag-new-row hidden" id="tskMTagNewRow">
+        <input class="tsk-f-input" id="tskMTagNewName" type="text" placeholder="New tag name" style="flex:1" maxlength="32">
+        <input id="tskMTagNewColor" type="color" value="#5b5bd6" style="width:36px;height:30px;border:1px solid var(--border);background:none;cursor:pointer;border-radius:4px">
+        <button class="tsk-modal-btn" type="button" onclick="tskMTagCreate()">Add</button>
+        <button class="tsk-modal-btn" type="button" onclick="tskMTagNewCancel()">Cancel</button>
+      </div>
+    </div>
+    <div class="tsk-f-group">
+      <label class="tsk-f-label">Checklist <span id="tskMChkCount" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-left:6px"></span></label>
+      <div class="tsk-mlist" id="tskMChecklist"></div>
+      <button class="tsk-mlist-add" type="button" onclick="tskMChkAdd()">+ Add item</button>
+    </div>
+    <div class="tsk-f-group">
+      <label class="tsk-f-label">Sub-tasks <span id="tskMSubCount" style="font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-left:6px"></span></label>
+      <div class="tsk-mlist" id="tskMSubtasks"></div>
+      <button class="tsk-mlist-add" type="button" onclick="tskMSubAdd()">+ Add sub-task</button>
+    </div>
+    <div class="tsk-modal-foot">
+      <div class="tsk-modal-foot-l">
+        <button class="tsk-modal-btn danger" id="tskMDel" type="button" onclick="tskMDelete()" style="display:none">Delete</button>
+      </div>
+      <button class="tsk-modal-btn" type="button" onclick="tskCloseModal()">Cancel</button>
+      <button class="tsk-modal-btn primary" type="button" onclick="tskMSave()">Save</button>
+    </div>
+  </div>
+</div>
+<!-- Snooze popover -->
+<div class="tsk-snooze-menu" id="tskSnoozeMenu"></div>
 
 <!-- CCNP notes modal -->
 <div class="ccnp-modal-wrap" id="ccnpModalWrap" onclick="if(event.target===this)ccnpCloseNotes()">
@@ -6409,6 +6850,7 @@ function switchTab(name) {
   document.getElementById(`nav-${name}`)?.classList.add('active');
   document.getElementById(`bnav-${name}`)?.classList.add('active');
   if (name === 'home') renderHome();
+  if (name === 'tsk') tskInit();
   if (name === 'arch') renderArch();
   if (name === 'goals') renderGoalsTab();
   if (name === 'tasks') kbInit();
@@ -15188,6 +15630,951 @@ function ccnpJumpTo(domId, topicId) {
   }, 80);
 }
 // ── End CCNP Study ─────────────────────────────────────────────────────────
+
+// ── Tasks (beta) ───────────────────────────────────────────────────────────
+// One unified store. Three views: Today / Week / List.
+// Storage keys:
+//   tasks_v1           — Array<Task>
+//   tasks_sections_v1  — Array<{id,name,color,order}>  (inbox always present)
+//   tasks_tags_v1      — Array<{id,name,color}>
+//   tasks_pref_v1      — { view, weekOffset, lastNudgeOn }
+// Task shape:
+//   { id, title, sectionId, scheduledOn ('YYYY-MM-DD'|null), scheduledTime ('HH:MM'|null),
+//     starred:bool, tags:[id], checklist:[{id,text,done,url}],
+//     parentId:string|null, links:[], notes:'', status:'open'|'done',
+//     createdAt, completedAt|null, order:number,
+//     recurring: ''|'daily'|'weekdays'|'weekly'|'biweekly'|'monthly' }
+
+const TSK_KEY = 'tasks_v1';
+const TSK_SEC_KEY = 'tasks_sections_v1';
+const TSK_TAG_KEY = 'tasks_tags_v1';
+const TSK_PREF_KEY = 'tasks_pref_v1';
+
+const tskState = {
+  view: 'today',          // 'today' | 'week' | 'list'
+  weekOffset: 0,
+  search: '',
+  searchOpen: false,
+  selected: new Set(),
+  editingId: null,
+  linkEditing: null,      // {kind:'chk'|'sub', id} | null
+  showDone: { __all: false },  // per section
+  collapsed: new Set(),   // sectionIds collapsed
+  picker: null,           // {dateStr} when picker is open
+  snoozeMenu: null,       // taskId when snooze menu is open
+};
+const tskSync = { status: 'idle', pending: 0, retry: null, lastAt: null };
+
+function _tskLoad(key, def) { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch(e) { return def; } }
+function _tskWrite(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function tskGetAll() { return _tskLoad(TSK_KEY, []); }
+function tskGetSections() {
+  const list = _tskLoad(TSK_SEC_KEY, null);
+  if (!list) {
+    const seed = [{ id: 'inbox', name: 'Inbox', color: '#9ca3af', order: 0 }];
+    _tskWrite(TSK_SEC_KEY, seed);
+    return seed;
+  }
+  if (!list.find(s => s.id === 'inbox')) list.unshift({ id: 'inbox', name: 'Inbox', color: '#9ca3af', order: 0 });
+  return list;
+}
+function tskGetTags() { return _tskLoad(TSK_TAG_KEY, []); }
+function tskGetPref() { return _tskLoad(TSK_PREF_KEY, {}); }
+
+function _tskSetSync(status) {
+  tskSync.status = status;
+  const el = document.getElementById('tskSync');
+  if (!el) return;
+  const ts = tskSync.lastAt ? ` · ${new Date(tskSync.lastAt).toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'})}` : '';
+  el.dataset.status = status;
+  el.textContent = status === 'saving' ? 'Saving…' : status === 'error' ? 'Save failed — retrying' : `Saved${ts}`;
+}
+function tskSaveAll(tasks) {
+  _tskWrite(TSK_KEY, tasks);
+  tskSync.pending += 1; _tskSetSync('saving');
+  return api('/api/kb/tasks_unified', { method:'PUT', body: JSON.stringify({ value: { tasks, sections: tskGetSections(), tags: tskGetTags() } }) })
+    .then(() => { tskSync.pending = Math.max(0, tskSync.pending - 1); tskSync.lastAt = Date.now(); if (tskSync.pending === 0) _tskSetSync('idle'); })
+    .catch(() => {
+      tskSync.pending = Math.max(0, tskSync.pending - 1); _tskSetSync('error');
+      if (!tskSync.retry) tskSync.retry = setInterval(() => {
+        if (tskSync.status !== 'error') { clearInterval(tskSync.retry); tskSync.retry = null; return; }
+        tskSaveAll(tskGetAll()).catch(() => {});
+      }, 5000);
+    });
+}
+function tskSaveSections(sections) { _tskWrite(TSK_SEC_KEY, sections); tskSaveAll(tskGetAll()); }
+function tskSaveTags(tags) { _tskWrite(TSK_TAG_KEY, tags); tskSaveAll(tskGetAll()); }
+function tskSavePref(patch) { const cur = tskGetPref(); _tskWrite(TSK_PREF_KEY, { ...cur, ...patch }); }
+
+async function tskSyncFromServer() {
+  if (tskSync.pending > 0) return;
+  try {
+    const r = await api('/api/kb/tasks_unified');
+    const sv = r && r.value;
+    if (sv && typeof sv === 'object') {
+      if (Array.isArray(sv.tasks))    _tskWrite(TSK_KEY, sv.tasks);
+      if (Array.isArray(sv.sections)) _tskWrite(TSK_SEC_KEY, sv.sections);
+      if (Array.isArray(sv.tags))     _tskWrite(TSK_TAG_KEY, sv.tags);
+      tskSync.lastAt = Date.now();
+      _tskSetSync('idle');
+      tskRender();
+    } else {
+      // Server empty — push local if we have any.
+      const local = tskGetAll();
+      if (local.length) tskSaveAll(local);
+    }
+  } catch(_) {}
+}
+
+function _tskUid(prefix) { return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function _tskTodayStr() { return ds(new Date()); }
+function _tskWeekMonday(offset) {
+  const d = new Date(); d.setHours(0,0,0,0);
+  const dow = d.getDay();
+  d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1) + (offset || 0) * 7);
+  return d;
+}
+function _tskFmtDay(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  const today = _tskTodayStr();
+  const tomorrow = ds(new Date(Date.now() + 86400000));
+  if (iso === today) return 'today';
+  if (iso === tomorrow) return 'tomorrow';
+  return d.toLocaleDateString('en-AU', { weekday:'short', day:'numeric', month:'short' });
+}
+
+function tskInit() {
+  const pref = tskGetPref();
+  if (pref.view) tskState.view = pref.view;
+  if (typeof pref.weekOffset === 'number') tskState.weekOffset = pref.weekOffset;
+  tskExpandRecurring();   // generate any due recurring instances
+  tskRender();
+  tskSyncFromServer();
+}
+
+// Recurring expansion — when an instance of a recurring task is completed,
+// we materialise the next instance with the same template.
+function tskExpandRecurring() {
+  const tasks = tskGetAll();
+  const today = new Date(_tskTodayStr() + 'T00:00:00');
+  let dirty = false;
+  for (const t of tasks) {
+    if (!t.recurring || t.parentId) continue;
+    // Only spawn the next instance once the current one is marked done.
+    if (t.status !== 'done') continue;
+    // Skip if we already spawned a successor.
+    if (t._spawned) continue;
+    const base = t.scheduledOn ? new Date(t.scheduledOn + 'T00:00:00') : new Date(today);
+    const next = _tskNextRecurDate(t.recurring, base);
+    if (!next) continue;
+    const nextStr = ds(next);
+    // Avoid duplicate spawn if a future instance with same recurring template already exists.
+    const dupe = tasks.find(x => x.title === t.title && x.recurring === t.recurring && x.scheduledOn === nextStr && x.status === 'open');
+    if (dupe) { t._spawned = true; dirty = true; continue; }
+    tasks.push({
+      id: _tskUid('t'),
+      title: t.title,
+      sectionId: t.sectionId,
+      scheduledOn: nextStr,
+      scheduledTime: t.scheduledTime || null,
+      starred: !!t.starred,
+      tags: [...(t.tags || [])],
+      checklist: (t.checklist || []).map(c => ({ id: _tskUid('c'), text: c.text, done: false, url: c.url || '' })),
+      parentId: null,
+      links: [...(t.links || [])],
+      notes: t.notes || '',
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      order: t.order || 0,
+      recurring: t.recurring,
+    });
+    t._spawned = true;
+    dirty = true;
+  }
+  if (dirty) _tskWrite(TSK_KEY, tasks);
+}
+function _tskNextRecurDate(pattern, from) {
+  const d = new Date(from);
+  if (pattern === 'daily') d.setDate(d.getDate() + 1);
+  else if (pattern === 'weekly') d.setDate(d.getDate() + 7);
+  else if (pattern === 'biweekly') d.setDate(d.getDate() + 14);
+  else if (pattern === 'weekdays') {
+    do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  } else if (pattern === 'monthly') {
+    d.setMonth(d.getMonth() + 1);
+  } else return null;
+  return d;
+}
+
+// ── Render entry ─────────────────────────────────────
+function tskRender() {
+  const wrap = document.getElementById('tskWrap');
+  if (!wrap) return;
+  const sections = tskGetSections();
+  const tags = tskGetTags();
+  const headHtml = _tskRenderHead();
+  let bodyHtml = '';
+  if (tskState.view === 'today') bodyHtml = _tskRenderToday();
+  else if (tskState.view === 'week') bodyHtml = _tskRenderWeek();
+  else bodyHtml = _tskRenderList();
+  wrap.innerHTML = headHtml + bodyHtml + _tskRenderBulkBar();
+}
+
+function _tskRenderHead() {
+  const v = tskState.view;
+  return `
+    <div class="tsk-head">
+      <div class="tsk-head-l">
+        <div class="tsk-title">Tasks</div>
+        <span class="tsk-beta" title="Beta tab — will eventually replace Board's to-dos">beta</span>
+      </div>
+      <div class="tsk-head-r">
+        <span class="tsk-sync" id="tskSync" data-status="${tskSync.status}" title="Synced server-side">Saved</span>
+        <div class="tsk-view-seg">
+          <button class="tsk-view-btn${v==='today'?' on':''}" onclick="tskSetView('today')">Today <span class="tsk-view-btn-kbd">T</span></button>
+          <button class="tsk-view-btn${v==='week'?' on':''}"  onclick="tskSetView('week')">Week <span class="tsk-view-btn-kbd">W</span></button>
+          <button class="tsk-view-btn${v==='list'?' on':''}"  onclick="tskSetView('list')">List <span class="tsk-view-btn-kbd">L</span></button>
+        </div>
+      </div>
+    </div>
+    ${_tskRenderNudge()}
+    <div class="tsk-qadd">
+      <span class="tsk-qadd-ic">+</span>
+      <input id="tskQAdd" class="tsk-qadd-inp" type="text"
+        placeholder="Add a task — press Enter (use #tag or @section)"
+        autocomplete="off" spellcheck="false"
+        onkeydown="tskQAddKey(event)">
+      <span class="tsk-qadd-meta">N</span>
+    </div>
+    ${tskState.searchOpen ? `<div class="tsk-search on"><input id="tskSearch" class="tsk-f-input" placeholder="Search tasks…" oninput="tskState.search=this.value;tskRender();setTimeout(()=>{const el=document.getElementById('tskSearch');if(el){el.focus();el.setSelectionRange(${(tskState.search||'').length},${(tskState.search||'').length});}},0)" value="${escG(tskState.search)}"></div>` : ''}
+  `;
+}
+
+function _tskRenderNudge() {
+  const pref = tskGetPref();
+  const today = _tskTodayStr();
+  if (pref.lastNudgeOn === today) return '';
+  const tasks = tskGetAll().filter(t => t.status === 'open' && !t.parentId);
+  const overdue = tasks.filter(t => t.scheduledOn && t.scheduledOn < today).length;
+  const inbox = tasks.filter(t => (t.sectionId || 'inbox') === 'inbox' && !t.scheduledOn).length;
+  if (overdue + inbox < 3) return '';
+  const parts = [];
+  if (overdue) parts.push(`${overdue} overdue`);
+  if (inbox) parts.push(`${inbox} in Inbox`);
+  return `<div class="tsk-nudge">
+    <span class="tsk-qadd-ic">⌁</span>
+    <span class="tsk-nudge-text">${parts.join(' · ')} — take a minute to sort.</span>
+    <button class="tsk-nudge-dismiss" onclick="tskDismissNudge()" title="Dismiss for today">✕</button>
+  </div>`;
+}
+
+// ── Today view ──────────────────────────────────────
+function _tskRenderToday() {
+  const today = _tskTodayStr();
+  const all = tskGetAll().filter(t => !t.parentId);
+  const overdue = all.filter(t => t.status === 'open' && t.scheduledOn && t.scheduledOn < today);
+  const todayOpen = all.filter(t => t.status === 'open' && t.scheduledOn === today);
+  const todayDone = all.filter(t => t.status === 'done' && (t.scheduledOn === today || (t.completedAt && t.completedAt.slice(0,10) === today)));
+
+  const date = new Date(today + 'T00:00:00');
+  const dateLabel = date.toLocaleDateString('en-AU', { weekday:'long', day:'numeric', month:'long' });
+  const showDoneToday = !!tskState.showDone['__today'];
+
+  const sectionsHtml = [
+    overdue.length ? _tskGroupHtml('overdue', `Overdue · ${overdue.length}`, '#f25458', overdue, { isOverdue: true, dateStr: today }) : '',
+    _tskGroupHtml('today', `Today · ${todayOpen.length}`, '#5b5bd6', todayOpen, { dateStr: today, allowPick: true }),
+    todayDone.length ? `<div class="tsk-sec">
+      <button class="tsk-show-done" onclick="tskState.showDone['__today']=!tskState.showDone['__today'];tskRender()">${showDoneToday ? '▾' : '▸'} Done today (${todayDone.length})</button>
+      ${showDoneToday ? `<div class="tsk-task-list">${todayDone.map(t => _tskRowHtml(t, {})).join('')}</div>` : ''}
+    </div>` : '',
+  ].join('');
+
+  return `
+    <div class="tsk-period-bar">
+      <span class="tsk-period-label">${dateLabel}</span>
+    </div>
+    ${sectionsHtml || _tskEmpty('Nothing for today.', 'Pick from list', "tskState.view='list';tskRender()")}
+  `;
+}
+
+// ── Week view ───────────────────────────────────────
+function _tskRenderWeek() {
+  const mon = _tskWeekMonday(tskState.weekOffset);
+  const today = _tskTodayStr();
+  const days = Array.from({length:7}, (_,i) => { const d = new Date(mon); d.setDate(mon.getDate()+i); return d; });
+  const all = tskGetAll().filter(t => !t.parentId);
+  const fmt = d => d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+  const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const isCurrent = tskState.weekOffset === 0;
+
+  const colsHtml = days.map((d, i) => {
+    const dateStr = ds(d);
+    const dayTasks = all.filter(t => t.scheduledOn === dateStr).sort((a,b) => (a.scheduledTime||'').localeCompare(b.scheduledTime||''));
+    const isToday = dateStr === today;
+    const tagMap = Object.fromEntries(tskGetTags().map(t => [t.id, t]));
+    return `<div class="tsk-week-col${isToday?' is-today':''}" id="tskWeekDay_${dateStr}"
+      ondragover="tskWeekDayDragOver(event,'${dateStr}')"
+      ondragleave="tskWeekDayDragLeave(event)"
+      ondrop="tskWeekDayDrop(event,'${dateStr}')">
+      <div class="tsk-week-head">
+        <span class="tsk-week-dow">${DOW[i]}</span>
+        <span class="tsk-week-num">${d.getDate()}</span>
+      </div>
+      <div class="tsk-week-body">
+        ${dayTasks.map(t => {
+          const time = t.scheduledTime ? _tskFmtTime(t.scheduledTime) : '';
+          const tags = (t.tags||[]).map(tid => tagMap[tid]).filter(Boolean);
+          const accent = tags[0]?.color || (tskGetSections().find(s=>s.id===t.sectionId)?.color || 'var(--text-dim)');
+          return `<div class="tsk-week-task${t.status==='done'?' is-done':''}"
+            draggable="true" data-tid="${t.id}"
+            ondragstart="tskWeekTaskDragStart(event,'${t.id}')"
+            ondragend="tskWeekTaskDragEnd(event)"
+            onclick="tskOpenModal('${t.id}')"
+            style="border-left-color:${accent}">
+            <div class="tsk-week-task-title">${t.starred?'★ ':''}${escG(t.title)}</div>
+            ${time ? `<div class="tsk-week-task-meta">${time}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="tsk-week-add" type="button" onclick="tskQuickAddOn('${dateStr}')">+ add</button>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="tsk-period-bar">
+      <span class="tsk-period-label">${fmt(days[0])} – ${fmt(days[6])}${isCurrent ? ' · this week' : ''}</span>
+      <div class="tsk-period-nav">
+        <button class="tsk-period-btn" onclick="tskWeekNav(-1)">‹</button>
+        <button class="tsk-period-btn" onclick="tskWeekNav(0)">This week</button>
+        <button class="tsk-period-btn" onclick="tskWeekNav(1)">›</button>
+        <button class="tsk-period-btn" onclick="tskPickFromList(null,'week')" title="Pick a task to schedule into this week">+ Pick from list</button>
+      </div>
+    </div>
+    <div class="tsk-week">${colsHtml}</div>
+  `;
+}
+function _tskFmtTime(t) {
+  if (!t) return '';
+  const [hh, mm] = t.split(':').map(n => parseInt(n,10));
+  const ap = hh >= 12 ? 'pm' : 'am';
+  const h12 = hh % 12 || 12;
+  return mm === 0 ? `${h12}${ap}` : `${h12}:${String(mm).padStart(2,'0')}${ap}`;
+}
+
+// ── List view ───────────────────────────────────────
+function _tskRenderList() {
+  const sections = tskGetSections().slice().sort((a,b) => (a.order||0) - (b.order||0));
+  const all = tskGetAll().filter(t => !t.parentId);
+  const term = (tskState.search || '').toLowerCase().trim();
+  const tagMap = Object.fromEntries(tskGetTags().map(t => [t.id, t]));
+
+  const groupsHtml = sections.map(sec => {
+    let tasks = all.filter(t => (t.sectionId || 'inbox') === sec.id);
+    if (term) {
+      tasks = tasks.filter(t => {
+        const hay = (t.title + ' ' + (t.notes||'') + ' ' + (t.tags||[]).map(id => tagMap[id]?.name||'').join(' ')).toLowerCase();
+        return term.split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+      });
+    }
+    const open = tasks.filter(t => t.status === 'open');
+    const done = tasks.filter(t => t.status === 'done');
+    const showDone = !!tskState.showDone[sec.id];
+    const collapsed = tskState.collapsed.has(sec.id);
+    return `<div class="tsk-sec${collapsed?' is-collapsed':''}" data-sec="${sec.id}"
+      ondragover="tskListSecDragOver(event,'${sec.id}')"
+      ondragleave="tskListSecDragLeave(event)"
+      ondrop="tskListSecDrop(event,'${sec.id}')">
+      <div class="tsk-sec-head">
+        <span class="tsk-sec-chev" onclick="tskToggleSection('${sec.id}')">›</span>
+        <span class="tsk-sec-dot" style="background:${sec.color}"></span>
+        <span class="tsk-sec-name">${escG(sec.name)}</span>
+        <span class="tsk-sec-count">${open.length}</span>
+        <div class="tsk-sec-acts">
+          <button class="tsk-sec-act-btn" onclick="tskQuickAddOn(null,'${sec.id}')" title="Add task to this section">+ Add</button>
+          ${sec.id !== 'inbox' ? `<button class="tsk-sec-act-btn" onclick="tskRenameSection('${sec.id}')">Rename</button>
+          <button class="tsk-sec-act-btn danger" onclick="tskDeleteSection('${sec.id}')">Delete</button>` : ''}
+        </div>
+      </div>
+      <div class="tsk-task-list">
+        ${open.length ? open.map(t => _tskRowHtml(t, {})).join('') : `<div class="tsk-empty" style="padding:14px 8px;border:1px dashed var(--border);border-radius:var(--r-sm);margin-top:6px"><span class="tsk-empty-text">No tasks here</span></div>`}
+      </div>
+      ${done.length ? `<div class="tsk-sec-foot">
+        <button class="tsk-show-done" onclick="tskState.showDone['${sec.id}']=!tskState.showDone['${sec.id}'];tskRender()">${showDone ? '▾' : '▸'} Done (${done.length})</button>
+        ${showDone ? `<div class="tsk-task-list">${done.map(t => _tskRowHtml(t, {})).join('')}</div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  const addSecBtn = `<button class="tsk-sec-act-btn" onclick="tskAddSection()" style="margin-top:8px">+ New section</button>`;
+  return groupsHtml + addSecBtn;
+}
+
+// ── Group helper ────────────────────────────────────
+function _tskGroupHtml(key, label, color, tasks, opts) {
+  if (!tasks.length) return '';
+  return `<div class="tsk-sec${opts.isOverdue?' tsk-sec-overdue':''}"${opts.dateStr ? ` data-dropday="${opts.dateStr}"` : ''}>
+    <div class="tsk-sec-head">
+      <span class="tsk-sec-dot" style="background:${color}"></span>
+      <span class="tsk-sec-name">${label}</span>
+      ${opts.allowPick ? `<div class="tsk-sec-acts" style="opacity:1;position:relative">
+        <button class="tsk-sec-act-btn" onclick="tskPickFromList('${opts.dateStr}','today',event)">+ Pick from list</button>
+      </div>` : ''}
+    </div>
+    <div class="tsk-task-list">${tasks.map(t => _tskRowHtml(t, opts)).join('')}</div>
+  </div>`;
+}
+
+// ── Row helper ──────────────────────────────────────
+function _tskRowHtml(t, opts) {
+  const sec = tskGetSections().find(s => s.id === t.sectionId) || tskGetSections()[0];
+  const tagMap = Object.fromEntries(tskGetTags().map(x => [x.id, x]));
+  const tags = (t.tags || []).map(id => tagMap[id]).filter(Boolean);
+  const subs = tskGetAll().filter(x => x.parentId === t.id);
+  const subDone = subs.filter(x => x.status === 'done').length;
+  const checkDone = (t.checklist||[]).filter(x => x.done).length;
+  const isSelected = tskState.selected.has(t.id);
+  const today = _tskTodayStr();
+
+  const meta = [];
+  if (t.scheduledOn && t.scheduledOn !== today) {
+    const isLate = t.scheduledOn < today;
+    meta.push(`<span class="tsk-meta-date${isLate?' is-overdue':''}">⌚ ${_tskFmtDay(t.scheduledOn)}</span>`);
+  }
+  if (t.scheduledTime) meta.push(`<span class="tsk-meta-time">${_tskFmtTime(t.scheduledTime)}</span>`);
+  if (sec && sec.id !== 'inbox') meta.push(`<span class="tsk-meta-section" style="color:${sec.color}">● ${escG(sec.name)}</span>`);
+  if (subs.length) meta.push(`<span class="tsk-meta-sub">↳ ${subDone}/${subs.length}</span>`);
+  if (t.checklist && t.checklist.length) meta.push(`<span class="tsk-meta-sub">☐ ${checkDone}/${t.checklist.length}</span>`);
+  if (t.recurring) meta.push(`<span class="tsk-meta-recur">↻ ${t.recurring}</span>`);
+  tags.forEach(tg => meta.push(`<span class="tsk-meta-tag" style="color:${tg.color}">${escG(tg.name)}</span>`));
+
+  return `<div class="tsk-task${t.status==='done'?' is-done':''}${isSelected?' is-selected':''}"
+    draggable="true" data-tid="${t.id}"
+    ondragstart="tskListTaskDragStart(event,'${t.id}')"
+    ondragend="tskListTaskDragEnd(event)"
+    ondragover="tskListTaskDragOver(event,'${t.id}')"
+    ondragleave="tskListTaskDragLeave(event)"
+    ondrop="tskListTaskDrop(event,'${t.id}')"
+    onclick="if(event.target.closest('button,a'))return; if(event.shiftKey||event.metaKey||event.ctrlKey){tskToggleSelect('${t.id}',event);return} tskOpenModal('${t.id}')">
+    <span class="tsk-task-handle">⠿</span>
+    <button class="tsk-task-chk${t.status==='done'?' on':''}" type="button" onclick="event.stopPropagation();tskToggleDone('${t.id}')" title="Mark done"></button>
+    <div class="tsk-task-body">
+      <div class="tsk-task-title">${t.starred?'<span style="color:var(--sulfur,#fbbf24)">★</span> ':''}${escG(t.title)}</div>
+      ${meta.length ? `<div class="tsk-task-meta">${meta.join('')}</div>` : ''}
+    </div>
+    <div class="tsk-task-acts">
+      <button class="tsk-act-btn${t.starred?' starred':''}" onclick="event.stopPropagation();tskToggleStar('${t.id}')" title="Star">★</button>
+      <button class="tsk-act-btn" onclick="event.stopPropagation();tskOpenSnoozeMenu(event,'${t.id}')" title="Snooze">⏰</button>
+      <button class="tsk-act-btn" onclick="event.stopPropagation();tskDeleteTask('${t.id}')" title="Delete">✕</button>
+    </div>
+  </div>`;
+}
+
+// ── Bulk action bar ─────────────────────────────────
+function _tskRenderBulkBar() {
+  const n = tskState.selected.size;
+  return `<div class="tsk-bulk${n?' on':''}" id="tskBulk">
+    <span class="tsk-bulk-count">${n} selected</span>
+    <button class="tsk-bulk-act" onclick="tskBulkSchedule('${_tskTodayStr()}')">Today</button>
+    <button class="tsk-bulk-act" onclick="tskBulkSchedule(ds(new Date(Date.now()+86400000)))">Tomorrow</button>
+    <button class="tsk-bulk-act" onclick="tskBulkUnschedule()">Unschedule</button>
+    <button class="tsk-bulk-act" onclick="tskBulkSetSection()">Move…</button>
+    <button class="tsk-bulk-act" onclick="tskBulkMarkDone()">Mark done</button>
+    <div class="tsk-bulk-spacer"></div>
+    <button class="tsk-bulk-act danger" onclick="tskBulkDelete()">Delete</button>
+    <button class="tsk-bulk-act" onclick="tskState.selected.clear();tskRender()">Clear</button>
+  </div>`;
+}
+
+// ── Empty ───────────────────────────────────────────
+function _tskEmpty(text, cta, action) {
+  return `<div class="tsk-empty">
+    <div class="tsk-empty-icon">✓</div>
+    <div class="tsk-empty-text">${text}</div>
+    ${cta ? `<button class="tsk-empty-cta" onclick="${action}">${cta}</button>` : ''}
+  </div>`;
+}
+
+// ── State setters ───────────────────────────────────
+function tskSetView(v) { tskState.view = v; tskSavePref({ view: v }); tskRender(); setTimeout(() => document.getElementById('tskQAdd')?.focus(), 30); }
+function tskWeekNav(d) { tskState.weekOffset = d === 0 ? 0 : tskState.weekOffset + d; tskSavePref({ weekOffset: tskState.weekOffset }); tskRender(); }
+function tskToggleSection(id) { if (tskState.collapsed.has(id)) tskState.collapsed.delete(id); else tskState.collapsed.add(id); tskRender(); }
+function tskDismissNudge() { tskSavePref({ lastNudgeOn: _tskTodayStr() }); tskRender(); }
+function tskToggleSelect(id, ev) {
+  if (tskState.selected.has(id)) tskState.selected.delete(id); else tskState.selected.add(id);
+  tskRender();
+}
+
+// ── Quick add ───────────────────────────────────────
+function tskQAddKey(ev) {
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  const inp = ev.target;
+  const raw = (inp.value || '').trim();
+  if (!raw) return;
+  tskQuickAdd(raw);
+  inp.value = '';
+}
+// Parse #tag and @section out of the title. e.g. "Call mum #personal @home" → title='Call mum', tag=personal, section=home
+function tskQuickAdd(raw, defaults) {
+  defaults = defaults || {};
+  let title = raw;
+  let sectionId = defaults.sectionId || (tskState.view === 'list' && tskState.collapsed.size === 0 ? 'inbox' : 'inbox');
+  let scheduledOn = defaults.scheduledOn || (tskState.view === 'today' ? _tskTodayStr() : null);
+  const tags = [];
+  // @section
+  const secMatch = title.match(/@([a-zA-Z0-9_-]+)/);
+  if (secMatch) {
+    const found = tskGetSections().find(s => s.name.toLowerCase() === secMatch[1].toLowerCase() || s.id === secMatch[1].toLowerCase());
+    if (found) { sectionId = found.id; title = title.replace(secMatch[0], '').trim(); }
+  }
+  // #tag (multiple ok)
+  for (const m of title.matchAll(/#([a-zA-Z0-9_-]+)/g)) {
+    const tag = tskGetTags().find(tg => tg.name.toLowerCase() === m[1].toLowerCase());
+    if (tag) tags.push(tag.id);
+  }
+  title = title.replace(/#[a-zA-Z0-9_-]+/g, '').trim();
+  if (!title) return;
+  const tasks = tskGetAll();
+  tasks.push({
+    id: _tskUid('t'), title, sectionId, scheduledOn,
+    scheduledTime: defaults.scheduledTime || null,
+    starred: false, tags, checklist: [], parentId: null, links: [], notes: '',
+    status: 'open', createdAt: new Date().toISOString(), completedAt: null,
+    order: Date.now(), recurring: ''
+  });
+  tskSaveAll(tasks); tskRender();
+}
+function tskQuickAddOn(dateStr, sectionId) {
+  const def = {};
+  if (dateStr) def.scheduledOn = dateStr;
+  if (sectionId) def.sectionId = sectionId;
+  // Open modal pre-populated for richer entry.
+  tskOpenModal(null, def);
+}
+
+// ── Task actions ────────────────────────────────────
+function tskToggleDone(id) {
+  const tasks = tskGetAll();
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  if (t.status === 'done') { t.status = 'open'; t.completedAt = null; t._spawned = false; }
+  else { t.status = 'done'; t.completedAt = new Date().toISOString(); }
+  tskSaveAll(tasks);
+  tskExpandRecurring();
+  tskRender();
+}
+function tskToggleStar(id) {
+  const tasks = tskGetAll();
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  t.starred = !t.starred;
+  tskSaveAll(tasks); tskRender();
+}
+function tskDeleteTask(id) {
+  const tasks = tskGetAll().filter(t => t.id !== id && t.parentId !== id);
+  tskSaveAll(tasks); tskRender();
+}
+function tskScheduleTask(id, dateStr) {
+  const tasks = tskGetAll();
+  const t = tasks.find(x => x.id === id); if (!t) return;
+  t.scheduledOn = dateStr || null;
+  tskSaveAll(tasks); tskRender();
+}
+
+// ── Snooze ──────────────────────────────────────────
+function tskOpenSnoozeMenu(ev, id) {
+  ev.preventDefault(); ev.stopPropagation();
+  const menu = document.getElementById('tskSnoozeMenu');
+  if (!menu) return;
+  const today = new Date(_tskTodayStr() + 'T00:00:00');
+  const items = [
+    { label: 'Today',     date: ds(today),                          kbd: 'T' },
+    { label: 'Tomorrow',  date: ds(new Date(today.getTime()+86400000)), kbd: 'M' },
+    { label: 'This weekend', date: ds(_tskNextDow(today, 6)),       kbd: 'S' },
+    { label: 'Next Monday',  date: ds(_tskNextDow(today, 1)),       kbd: 'N' },
+    { label: 'Next week (in 7 days)', date: ds(new Date(today.getTime()+7*86400000)) },
+    { label: 'Unschedule',date: null },
+  ];
+  menu.innerHTML = items.map(it => `<div class="tsk-snooze-item" onclick="tskScheduleTask('${id}',${it.date?`'${it.date}'`:'null'});tskCloseSnoozeMenu()">
+    <span>${it.label}</span>
+    ${it.kbd ? `<span class="tsk-snooze-item-kbd">${it.kbd}</span>` : ''}
+  </div>`).join('');
+  const r = ev.currentTarget.getBoundingClientRect();
+  menu.style.left = Math.max(10, Math.min(window.innerWidth - 200, r.right - 180)) + 'px';
+  menu.style.top  = (r.bottom + 4 + window.scrollY) + 'px';
+  menu.classList.add('open');
+  setTimeout(() => document.addEventListener('click', tskCloseSnoozeMenu, { once: true }), 0);
+}
+function tskCloseSnoozeMenu() { document.getElementById('tskSnoozeMenu')?.classList.remove('open'); }
+function _tskNextDow(from, dow) {
+  const d = new Date(from);
+  do { d.setDate(d.getDate() + 1); } while (d.getDay() !== dow);
+  return d;
+}
+
+// ── Pick from list (opens a small popover with unscheduled tasks) ──
+function tskPickFromList(dateStr, viewHint, ev) {
+  const unscheduled = tskGetAll().filter(t => !t.scheduledOn && t.status === 'open' && !t.parentId).slice(0, 30);
+  const sections = Object.fromEntries(tskGetSections().map(s => [s.id, s]));
+  const items = unscheduled.map(t => {
+    const sec = sections[t.sectionId] || sections.inbox;
+    return `<div class="tsk-picker-row" onclick="tskScheduleTask('${t.id}','${dateStr || _tskTodayStr()}')">
+      <span style="color:${sec.color}">●</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escG(t.title)}</span>
+      <span class="tsk-picker-row-meta">${escG(sec.name)}</span>
+    </div>`;
+  }).join('');
+  const menu = document.getElementById('tskSnoozeMenu');
+  menu.innerHTML = `<div class="tsk-picker-head">Pick a task → ${_tskFmtDay(dateStr || _tskTodayStr())}</div>
+    ${unscheduled.length ? items : `<div class="tsk-picker-empty">No unscheduled tasks. Add one in List view.</div>`}`;
+  menu.style.minWidth = '300px'; menu.style.maxHeight = '380px'; menu.style.overflow = 'auto';
+  // Position near the click if available, else center under header
+  if (ev && ev.currentTarget) {
+    const r = ev.currentTarget.getBoundingClientRect();
+    menu.style.left = Math.max(10, Math.min(window.innerWidth - 320, r.right - 300)) + 'px';
+    menu.style.top  = (r.bottom + 4 + window.scrollY) + 'px';
+  } else {
+    menu.style.left = '50%'; menu.style.transform = 'translateX(-50%)';
+    menu.style.top = '120px';
+  }
+  menu.classList.add('open');
+  setTimeout(() => document.addEventListener('click', tskCloseSnoozeMenu, { once: true }), 0);
+}
+
+// ── Modal ───────────────────────────────────────────
+let TM = { id: null, defaults: null, working: null };  // working = mutable task buffer
+function tskOpenModal(id, defaults) {
+  const existing = id ? tskGetAll().find(t => t.id === id) : null;
+  TM.id = id || null;
+  TM.defaults = defaults || {};
+  TM.working = existing ? JSON.parse(JSON.stringify(existing)) : {
+    id: _tskUid('t'),
+    title: '',
+    sectionId: defaults?.sectionId || 'inbox',
+    scheduledOn: defaults?.scheduledOn || null,
+    scheduledTime: defaults?.scheduledTime || null,
+    starred: false, tags: [], checklist: [], parentId: defaults?.parentId || null,
+    links: [], notes: '',
+    status: 'open', createdAt: new Date().toISOString(), completedAt: null,
+    order: Date.now(), recurring: '',
+  };
+  _tskMRender();
+  document.getElementById('tskModalWrap').classList.add('open');
+  setTimeout(() => document.getElementById('tskMTitle')?.focus(), 30);
+}
+function tskCloseModal() {
+  TM = { id: null, defaults: null, working: null };
+  document.getElementById('tskModalWrap').classList.remove('open');
+}
+function _tskMRender() {
+  const w = TM.working; if (!w) return;
+  document.getElementById('tskMTitle').value = w.title || '';
+  document.getElementById('tskMChk').classList.toggle('on', w.status === 'done');
+  document.getElementById('tskMStar').classList.toggle('starred', !!w.starred);
+  document.getElementById('tskMDate').value = w.scheduledOn || '';
+  document.getElementById('tskMTime').value = w.scheduledTime || '';
+  document.getElementById('tskMRecur').value = w.recurring || '';
+  document.getElementById('tskMDel').style.display = TM.id ? '' : 'none';
+  // Section dropdown
+  const secSel = document.getElementById('tskMSection');
+  secSel.innerHTML = tskGetSections().map(s => `<option value="${s.id}"${w.sectionId===s.id?' selected':''}>${escG(s.name)}</option>`).join('');
+  // Tags
+  const tp = document.getElementById('tskMTagPicker');
+  const tags = tskGetTags();
+  tp.innerHTML = tags.map(t => `<button class="tsk-tag-chip${(w.tags||[]).includes(t.id)?' on':''}" style="color:${t.color}" onclick="tskMToggleTag('${t.id}')" type="button">${escG(t.name)}</button>`).join('')
+    + `<button class="tsk-tag-add" type="button" onclick="tskMTagNewShow()">+ tag</button>`;
+  // Checklist
+  const cl = document.getElementById('tskMChecklist');
+  cl.innerHTML = (w.checklist||[]).map(it => _tskMChkRow(it)).join('') || '<div style="font-size:11.5px;color:var(--text-dim);padding:6px 4px">No items.</div>';
+  document.getElementById('tskMChkCount').textContent = w.checklist.length ? `${w.checklist.filter(x=>x.done).length}/${w.checklist.length}` : '';
+  cl.querySelectorAll('.tsk-mlist-text').forEach(ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+  // Sub-tasks (live read from store)
+  const sub = document.getElementById('tskMSubtasks');
+  const all = tskGetAll();
+  const subs = TM.id ? all.filter(t => t.parentId === TM.id) : [];
+  sub.innerHTML = subs.map(s => `<div class="tsk-mlist-row${s.status==='done'?' is-done':''}">
+    <button class="tsk-mlist-chk${s.status==='done'?' on':''}" onclick="tskToggleDone('${s.id}');tskOpenModal('${TM.id}')" type="button"></button>
+    <span class="tsk-mlist-text" style="cursor:pointer" onclick="tskOpenModal('${s.id}')">${escG(s.title)}</span>
+    <button class="tsk-mlist-del" type="button" onclick="tskDeleteTask('${s.id}');tskOpenModal('${TM.id}')">✕</button>
+  </div>`).join('') || '<div style="font-size:11.5px;color:var(--text-dim);padding:6px 4px">No sub-tasks.</div>';
+  document.getElementById('tskMSubCount').textContent = subs.length ? `${subs.filter(x=>x.status==='done').length}/${subs.length}` : '';
+}
+function _tskMChkRow(it) {
+  const safe = escG(it.text || '');
+  const hasUrl = !!(it.url && it.url.trim());
+  const isEditingLink = TM.linkEditing && TM.linkEditing.kind === 'chk' && TM.linkEditing.id === it.id;
+  return `<div class="tsk-mlist-row${it.done?' is-done':''}" data-id="${it.id}">
+    <button class="tsk-mlist-chk${it.done?' on':''}" onclick="tskMChkToggle('${it.id}')" type="button"></button>
+    <textarea class="tsk-mlist-text" rows="1" placeholder="Item…"
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';tskMChkEdit('${it.id}',this.value)"
+      onkeydown="tskMChkKey(event,'${it.id}')">${safe}</textarea>
+    ${hasUrl && !isEditingLink ? `<a href="${escG(it.url)}" target="_blank" rel="noopener noreferrer" class="tsk-mlist-link has-url" title="${escG(it.url)}" onclick="event.stopPropagation()">🔗</a>` : ''}
+    <button class="tsk-mlist-link${hasUrl?' has-url':''}" type="button" onclick="tskMChkLinkToggle('${it.id}')" title="${hasUrl ? 'Edit link' : 'Add link'}">🔗</button>
+    <button class="tsk-mlist-del" type="button" onclick="tskMChkDel('${it.id}')">✕</button>
+    ${isEditingLink ? `<div class="tsk-link-edit-row" style="width:100%">
+      <input id="tskMChkLinkInp_${it.id}" type="url" placeholder="https://example.com" value="${hasUrl?escG(it.url):''}" onkeydown="tskMChkLinkKey(event,'${it.id}')">
+      <button class="tsk-link-edit-btn save" type="button" onclick="tskMChkLinkSave('${it.id}')">Save</button>
+      <button class="tsk-link-edit-btn" type="button" onclick="tskMChkLinkCancel()">Cancel</button>
+      ${hasUrl ? `<button class="tsk-link-edit-btn" type="button" style="color:var(--red)" onclick="tskMChkLinkRemove('${it.id}')">Remove</button>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+function tskMToggleDone() {
+  const w = TM.working; if (!w) return;
+  if (w.status === 'done') { w.status = 'open'; w.completedAt = null; }
+  else { w.status = 'done'; w.completedAt = new Date().toISOString(); }
+  _tskMRender();
+}
+function tskMToggleStar() { if (!TM.working) return; TM.working.starred = !TM.working.starred; _tskMRender(); }
+function tskMToggleTag(id) {
+  const w = TM.working; if (!w) return;
+  w.tags = w.tags || [];
+  if (w.tags.includes(id)) w.tags = w.tags.filter(x => x !== id);
+  else w.tags.push(id);
+  _tskMRender();
+}
+function tskMTagNewShow() { document.getElementById('tskMTagNewRow').classList.remove('hidden'); document.getElementById('tskMTagNewName')?.focus(); }
+function tskMTagNewCancel() { document.getElementById('tskMTagNewRow').classList.add('hidden'); }
+function tskMTagCreate() {
+  const name = document.getElementById('tskMTagNewName').value.trim();
+  if (!name) return;
+  const color = document.getElementById('tskMTagNewColor').value || '#5b5bd6';
+  const tags = tskGetTags();
+  const tag = { id: _tskUid('tg'), name, color };
+  tags.push(tag);
+  tskSaveTags(tags);
+  TM.working.tags = TM.working.tags || [];
+  TM.working.tags.push(tag.id);
+  document.getElementById('tskMTagNewName').value = '';
+  document.getElementById('tskMTagNewRow').classList.add('hidden');
+  _tskMRender();
+}
+function tskMChkAdd() {
+  TM.working.checklist = TM.working.checklist || [];
+  TM.working.checklist.push({ id: _tskUid('c'), text: '', done: false, url: '' });
+  _tskMRender();
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#tskMChecklist .tsk-mlist-row');
+    rows[rows.length-1]?.querySelector('.tsk-mlist-text')?.focus();
+  }, 20);
+}
+function tskMChkToggle(id) { const it = TM.working.checklist.find(x => x.id === id); if (it) { it.done = !it.done; _tskMRender(); } }
+function tskMChkEdit(id, text) {
+  const it = TM.working.checklist.find(x => x.id === id); if (it) it.text = text;
+  const c = document.getElementById('tskMChkCount');
+  if (c) c.textContent = `${TM.working.checklist.filter(x=>x.done).length}/${TM.working.checklist.length}`;
+}
+function tskMChkDel(id) { TM.working.checklist = TM.working.checklist.filter(x => x.id !== id); _tskMRender(); }
+function tskMChkKey(ev, id) {
+  if (ev.key === 'Enter' && !ev.shiftKey) {
+    ev.preventDefault();
+    const it = TM.working.checklist.find(x => x.id === id);
+    if (it && !it.text.trim()) return;
+    tskMChkAdd();
+  } else if (ev.key === 'Backspace') {
+    const it = TM.working.checklist.find(x => x.id === id);
+    if (it && !it.text && ev.target.selectionStart === 0) { ev.preventDefault(); tskMChkDel(id); }
+  }
+}
+function _tskNormUrl(raw) {
+  if (!raw) return '';
+  const t = String(raw).trim();
+  if (!t) return '';
+  const low = t.toLowerCase();
+  if (['javascript:','data:','vbscript:','file:'].some(p => low.startsWith(p))) return '';
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) return t;
+  if (/^mailto:/i.test(t) || /^tel:/i.test(t)) return t;
+  return 'https://' + t;
+}
+function tskMChkLinkToggle(id) { TM.linkEditing = (TM.linkEditing && TM.linkEditing.id === id) ? null : { kind:'chk', id }; _tskMRender(); setTimeout(()=>document.getElementById('tskMChkLinkInp_'+id)?.focus(),20); }
+function tskMChkLinkSave(id) {
+  const inp = document.getElementById('tskMChkLinkInp_'+id); const it = TM.working.checklist.find(x => x.id === id);
+  if (it && inp) it.url = _tskNormUrl(inp.value);
+  TM.linkEditing = null; _tskMRender();
+}
+function tskMChkLinkRemove(id) { const it = TM.working.checklist.find(x => x.id === id); if (it) it.url = ''; TM.linkEditing = null; _tskMRender(); }
+function tskMChkLinkCancel() { TM.linkEditing = null; _tskMRender(); }
+function tskMChkLinkKey(ev, id) { if (ev.key === 'Enter') { ev.preventDefault(); tskMChkLinkSave(id); } else if (ev.key === 'Escape') { ev.preventDefault(); tskMChkLinkCancel(); } }
+function tskMSubAdd() {
+  if (!TM.id) { toast('Save the parent task first, then add sub-tasks.', 'err'); return; }
+  const tasks = tskGetAll();
+  tasks.push({
+    id: _tskUid('t'),
+    title: '',
+    sectionId: TM.working.sectionId, scheduledOn: null, scheduledTime: null,
+    starred: false, tags: [], checklist: [], parentId: TM.id, links: [], notes: '',
+    status: 'open', createdAt: new Date().toISOString(), completedAt: null,
+    order: Date.now(), recurring: '',
+  });
+  tskSaveAll(tasks);
+  tskOpenModal(tasks[tasks.length-1].id);  // open the new sub-task
+}
+function tskMSave() {
+  const w = TM.working; if (!w) return;
+  w.title = document.getElementById('tskMTitle').value.trim();
+  if (!w.title) { toast('Title is required', 'err'); return; }
+  w.sectionId = document.getElementById('tskMSection').value;
+  w.scheduledOn = document.getElementById('tskMDate').value || null;
+  w.scheduledTime = document.getElementById('tskMTime').value || null;
+  w.recurring = document.getElementById('tskMRecur').value || '';
+  // Drop blank checklist items
+  w.checklist = (w.checklist || []).filter(c => (c.text||'').trim().length).map(c => ({ id: c.id, text: c.text.trim(), done: !!c.done, url: c.url || '' }));
+  const tasks = tskGetAll();
+  if (TM.id) {
+    const idx = tasks.findIndex(t => t.id === TM.id);
+    if (idx >= 0) tasks[idx] = { ...tasks[idx], ...w };
+  } else {
+    tasks.push(w);
+  }
+  tskSaveAll(tasks);
+  tskCloseModal();
+  tskRender();
+}
+function tskMDelete() {
+  if (!TM.id) return;
+  if (!confirm('Delete this task and all its sub-tasks?')) return;
+  tskDeleteTask(TM.id);
+  tskCloseModal();
+}
+
+// ── Sections (add/rename/delete) ────────────────────
+function tskAddSection() {
+  const name = prompt('Section name:');
+  if (!name) return;
+  const sections = tskGetSections();
+  const palette = ['#5b5bd6','#22d3ee','#34d399','#fbbf24','#fb923c','#f472b6','#a78bfa','#60a5fa'];
+  const color = palette[sections.length % palette.length];
+  sections.push({ id: _tskUid('s'), name: name.trim(), color, order: sections.length });
+  tskSaveSections(sections); tskRender();
+}
+function tskRenameSection(id) {
+  const sections = tskGetSections();
+  const sec = sections.find(s => s.id === id); if (!sec) return;
+  const name = prompt('Rename section:', sec.name);
+  if (!name) return;
+  sec.name = name.trim();
+  tskSaveSections(sections); tskRender();
+}
+function tskDeleteSection(id) {
+  if (id === 'inbox') return;
+  if (!confirm('Delete this section? Tasks in it move to Inbox.')) return;
+  const sections = tskGetSections().filter(s => s.id !== id);
+  const tasks = tskGetAll();
+  tasks.forEach(t => { if (t.sectionId === id) t.sectionId = 'inbox'; });
+  _tskWrite(TSK_KEY, tasks);
+  tskSaveSections(sections); tskRender();
+}
+
+// ── Drag & drop ─────────────────────────────────────
+let _tskDragId = null;
+// List view: task between tasks (reorder) + between sections (move)
+function tskListTaskDragStart(ev, id) { _tskDragId = id; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', id); ev.currentTarget.classList.add('dragging'); }
+function tskListTaskDragEnd(ev) { ev.currentTarget.classList.remove('dragging'); _tskDragId = null; document.querySelectorAll('.tsk-task.drag-over-top,.tsk-task.drag-over-bot').forEach(el=>el.classList.remove('drag-over-top','drag-over-bot')); }
+function tskListTaskDragOver(ev, id) {
+  if (!_tskDragId || _tskDragId === id) return;
+  ev.preventDefault(); ev.stopPropagation();
+  document.querySelectorAll('.tsk-task.drag-over-top,.tsk-task.drag-over-bot').forEach(el=>el.classList.remove('drag-over-top','drag-over-bot'));
+  const r = ev.currentTarget.getBoundingClientRect();
+  ev.currentTarget.classList.add(ev.clientY < r.top + r.height/2 ? 'drag-over-top' : 'drag-over-bot');
+}
+function tskListTaskDragLeave(ev) { if (!ev.currentTarget.contains(ev.relatedTarget)) ev.currentTarget.classList.remove('drag-over-top','drag-over-bot'); }
+function tskListTaskDrop(ev, targetId) {
+  ev.preventDefault(); ev.stopPropagation();
+  if (!_tskDragId || _tskDragId === targetId) { _tskDragId = null; return; }
+  const tasks = tskGetAll();
+  const drag = tasks.find(t => t.id === _tskDragId);
+  const target = tasks.find(t => t.id === targetId);
+  if (!drag || !target) return;
+  const r = ev.currentTarget.getBoundingClientRect();
+  const insertBefore = ev.clientY < r.top + r.height/2;
+  drag.sectionId = target.sectionId;
+  // Reorder via `order` field, take target's order ± 1
+  drag.order = target.order + (insertBefore ? -0.5 : 0.5);
+  // Re-normalise orders within the destination section
+  const inSec = tasks.filter(t => t.sectionId === drag.sectionId && !t.parentId).sort((a,b) => (a.order||0)-(b.order||0));
+  inSec.forEach((t,i) => t.order = i);
+  tskSaveAll(tasks); tskRender();
+}
+function tskListSecDragOver(ev, secId) {
+  if (!_tskDragId) return;
+  if (ev.target.closest('.tsk-task')) return;
+  ev.preventDefault();
+}
+function tskListSecDragLeave(ev) {}
+function tskListSecDrop(ev, secId) {
+  ev.preventDefault();
+  if (!_tskDragId) return;
+  const tasks = tskGetAll();
+  const drag = tasks.find(t => t.id === _tskDragId); if (!drag) return;
+  drag.sectionId = secId;
+  drag.order = Date.now();
+  tskSaveAll(tasks); tskRender();
+}
+// Week view: drag task between days
+function tskWeekTaskDragStart(ev, id) { _tskDragId = id; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', id); ev.currentTarget.classList.add('dragging'); }
+function tskWeekTaskDragEnd(ev) { ev.currentTarget.classList.remove('dragging'); _tskDragId = null; document.querySelectorAll('.tsk-week-col.drag-over').forEach(el=>el.classList.remove('drag-over')); }
+function tskWeekDayDragOver(ev, dateStr) { if (!_tskDragId) return; ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
+function tskWeekDayDragLeave(ev) { if (!ev.currentTarget.contains(ev.relatedTarget)) ev.currentTarget.classList.remove('drag-over'); }
+function tskWeekDayDrop(ev, dateStr) {
+  ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
+  if (!_tskDragId) return;
+  tskScheduleTask(_tskDragId, dateStr);
+  _tskDragId = null;
+}
+
+// ── Bulk actions ────────────────────────────────────
+function tskBulkSchedule(dateStr) {
+  const ids = [...tskState.selected]; if (!ids.length) return;
+  const tasks = tskGetAll();
+  ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) t.scheduledOn = dateStr; });
+  tskSaveAll(tasks); tskState.selected.clear(); tskRender();
+}
+function tskBulkUnschedule() {
+  const ids = [...tskState.selected]; if (!ids.length) return;
+  const tasks = tskGetAll();
+  ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { t.scheduledOn = null; t.scheduledTime = null; } });
+  tskSaveAll(tasks); tskState.selected.clear(); tskRender();
+}
+function tskBulkSetSection() {
+  const ids = [...tskState.selected]; if (!ids.length) return;
+  const opts = tskGetSections().map(s => s.name).join(' / ');
+  const name = prompt(`Move to section (${opts}):`); if (!name) return;
+  const sec = tskGetSections().find(s => s.name.toLowerCase() === name.toLowerCase()); if (!sec) { toast('Unknown section', 'err'); return; }
+  const tasks = tskGetAll();
+  ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) t.sectionId = sec.id; });
+  tskSaveAll(tasks); tskState.selected.clear(); tskRender();
+}
+function tskBulkMarkDone() {
+  const ids = [...tskState.selected]; if (!ids.length) return;
+  const tasks = tskGetAll();
+  ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { t.status = 'done'; t.completedAt = new Date().toISOString(); } });
+  tskSaveAll(tasks); tskState.selected.clear(); tskExpandRecurring(); tskRender();
+}
+function tskBulkDelete() {
+  const ids = [...tskState.selected]; if (!ids.length) return;
+  if (!confirm(`Delete ${ids.length} task${ids.length>1?'s':''} (and their sub-tasks)?`)) return;
+  const idSet = new Set(ids);
+  const tasks = tskGetAll().filter(t => !idSet.has(t.id) && !idSet.has(t.parentId));
+  tskSaveAll(tasks); tskState.selected.clear(); tskRender();
+}
+
+// ── Keyboard shortcuts ──────────────────────────────
+document.addEventListener('keydown', function(ev) {
+  if (!document.getElementById('tab-tsk')?.classList.contains('active')) return;
+  if (document.getElementById('tskModalWrap')?.classList.contains('open')) {
+    if (ev.key === 'Escape') { tskCloseModal(); ev.preventDefault(); }
+    return;
+  }
+  const tag = (ev.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  if (ev.key === 'n') { ev.preventDefault(); document.getElementById('tskQAdd')?.focus(); }
+  else if (ev.key === '/') { ev.preventDefault(); tskState.searchOpen = true; tskRender(); setTimeout(()=>document.getElementById('tskSearch')?.focus(),0); }
+  else if (ev.key === 't') tskSetView('today');
+  else if (ev.key === 'w') tskSetView('week');
+  else if (ev.key === 'l') tskSetView('list');
+  else if (ev.key === 'Escape') { if (tskState.searchOpen) { tskState.searchOpen = false; tskState.search = ''; tskRender(); } }
+});
+// ── End Tasks (beta) ───────────────────────────────────────────────────────
 
 </script>
 </body>
