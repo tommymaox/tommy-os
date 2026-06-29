@@ -2892,17 +2892,17 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 /* List view — Columns layout (CSS columns masonry: sections fill vertically
    then wrap to the next column, so no blank space below short sections). */
 .tsk-list-cols {
-  column-width: 300px;
-  column-gap: 12px;
+  column-width: 360px;
+  column-gap: 14px;
 }
 .tsk-list-cols .tsk-sec {
   display: inline-block;       /* required so column flow treats each as one block */
   width: 100%;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 10px 12px 8px;
+  padding: 10px 14px 8px;
   break-inside: avoid;
   -webkit-column-break-inside: avoid;
   page-break-inside: avoid;
@@ -2912,13 +2912,30 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
   margin-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
-.tsk-list-cols .tsk-task { padding: 6px 6px; gap: 8px; min-height: 32px; }
-.tsk-list-cols .tsk-task-title { font-size: 12.5px; }
+/* Tighter task row in cols mode + actions absolutely positioned so they
+   don't reserve grid space and squeeze the title into a narrow column. */
+.tsk-list-cols .tsk-task {
+  position: relative;
+  grid-template-columns: 14px 16px 1fr;
+  padding: 6px 6px;
+  gap: 8px;
+  min-height: 30px;
+}
+.tsk-list-cols .tsk-task-title { font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
 .tsk-list-cols .tsk-task-meta { font-size: 10.5px; }
+.tsk-list-cols .tsk-task-acts {
+  position: absolute; right: 4px; top: 4px;
+  background: color-mix(in oklab, var(--surface2) 88%, transparent);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  padding: 2px 3px; border-radius: 4px;
+  display: none; opacity: 1;
+}
+.tsk-list-cols .tsk-task:hover .tsk-task-acts { display: inline-flex; }
+.tsk-list-cols .tsk-task-acts .tsk-act-btn,
+.tsk-list-cols .tsk-task-acts .tsk-task-add-sub { width: 22px; height: 22px; font-size: 11px; }
 .tsk-list-cols .tsk-sec-foot { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--border); }
 .tsk-list-cols .tsk-sec-acts { opacity: 1; }
 .tsk-list-cols .tsk-sec-act-btn { padding: 2px 6px; font-size: 10px; }
-.tsk-list-cols .tsk-task-acts { opacity: 0; }
 
 /* Section / day groups */
 .tsk-sec { margin-bottom: 22px; }
@@ -2980,7 +2997,7 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 .tsk-task-chk.on { background: var(--accent); border-color: var(--accent); }
 .tsk-task-chk.on::after { content: '✓'; font-size: 10px; color: var(--bg); font-weight: 700; line-height: 1; }
 .tsk-task-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.tsk-task-title { font-size: 13px; line-height: 1.4; color: var(--text); word-break: break-word; }
+.tsk-task-title { font-size: 13px; line-height: 1.4; color: var(--text); overflow-wrap: anywhere; }
 .tsk-task-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--text-dim); }
 .tsk-meta-tag {
   display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px;
