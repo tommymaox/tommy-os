@@ -2877,6 +2877,50 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 .tsk-search { display: none; margin-bottom: 14px; }
 .tsk-search.on { display: flex; }
 
+/* List layout toggle button (next to view seg) */
+.tsk-layout-btn {
+  padding: 5px 9px; background: none; border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text-sec); font-size: 11.5px;
+  font-family: inherit; cursor: pointer; transition: all var(--tr);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tsk-layout-btn:hover { color: var(--text); border-color: var(--line-3, var(--border)); }
+.tsk-layout-btn.on { color: var(--text); background: var(--surface2); }
+.tsk-layout-ic { display: inline-flex; gap: 2px; }
+.tsk-layout-ic span { width: 3px; height: 11px; background: currentColor; border-radius: 1px; opacity: 0.6; }
+
+/* List view — Columns layout (horizontal, wraps to rows when narrow) */
+.tsk-list-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.tsk-list-cols .tsk-sec {
+  margin-bottom: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px 8px;
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 280px);
+  min-height: 140px;
+  overflow: hidden;
+}
+.tsk-list-cols .tsk-sec-head {
+  padding: 2px 0 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.tsk-list-cols .tsk-task-list { flex: 1; overflow-y: auto; min-height: 0; padding-right: 2px; }
+.tsk-list-cols .tsk-task { padding: 6px 6px; gap: 8px; min-height: 32px; }
+.tsk-list-cols .tsk-task-title { font-size: 12.5px; }
+.tsk-list-cols .tsk-task-meta { font-size: 10.5px; }
+.tsk-list-cols .tsk-sec-foot { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--border); }
+.tsk-list-cols .tsk-sec-acts { opacity: 1; }
+.tsk-list-cols .tsk-sec-act-btn { padding: 2px 6px; font-size: 10px; }
+.tsk-list-cols .tsk-task-acts { opacity: 0; }
+
 /* Section / day groups */
 .tsk-sec { margin-bottom: 22px; }
 .tsk-sec-head {
@@ -3055,6 +3099,83 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 .tsk-nudge-text { font-size: 12.5px; color: var(--text); flex: 1; }
 .tsk-nudge-dismiss { background: none; border: none; cursor: pointer; color: var(--text-dim); font-size: 14px; padding: 0 4px; }
 .tsk-nudge-dismiss:hover { color: var(--text); }
+
+/* Inline quick-add inside a section */
+.tsk-inline-add {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 4px; padding: 6px 10px;
+  border: 1px dashed var(--border); border-radius: var(--r-sm);
+  background: none;
+  transition: border-color var(--tr), background var(--tr);
+}
+.tsk-inline-add:hover { border-color: var(--line-3, var(--border)); }
+.tsk-inline-add:focus-within { border-style: solid; border-color: var(--accent); background: var(--surface); }
+.tsk-inline-add-ic { color: var(--text-dim); font-size: 14px; line-height: 1; }
+.tsk-inline-add-inp {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: inherit; font-size: 12.5px; color: var(--text);
+  min-width: 0;
+}
+.tsk-inline-add-inp::placeholder { color: var(--text-dim); }
+.tsk-inline-add-hint {
+  font-family: var(--mono); font-size: 9.5px; color: var(--text-dim);
+  opacity: 0; transition: opacity var(--tr);
+}
+.tsk-inline-add:focus-within .tsk-inline-add-hint { opacity: 1; }
+
+/* In-app section name editor (inline, replaces native prompt) */
+.tsk-sec-edit-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 0;
+}
+.tsk-sec-edit-inp {
+  flex: 1; min-width: 140px;
+  padding: 6px 10px; background: var(--bg); border: 1px solid var(--accent);
+  border-radius: var(--r-sm); color: var(--text);
+  font-family: inherit; font-size: 13px; outline: none;
+}
+.tsk-sec-edit-color {
+  width: 30px; height: 30px; padding: 0; border: 1px solid var(--border);
+  background: none; cursor: pointer; border-radius: 4px;
+}
+.tsk-sec-edit-btn {
+  padding: 6px 12px; background: none; border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text-sec);
+  font-family: inherit; font-size: 11.5px; cursor: pointer;
+  transition: all var(--tr);
+}
+.tsk-sec-edit-btn:hover { color: var(--text); border-color: var(--line-3, var(--border)); }
+.tsk-sec-edit-btn.save { background: var(--accent); border-color: var(--accent); color: var(--bg, #1a1a1a); }
+.tsk-sec-edit-btn.danger:hover { color: var(--red); border-color: rgba(242,84,91,0.4); }
+
+/* Week-day inline quick-add (replaces "+ add" button) */
+.tsk-week-qadd {
+  margin: 4px; padding: 5px 7px;
+  background: none; border: 1px dashed transparent; border-radius: 4px;
+  transition: border-color var(--tr), background var(--tr);
+}
+.tsk-week-col:hover .tsk-week-qadd { border-color: var(--border); }
+.tsk-week-qadd:focus-within { border-style: solid; border-color: var(--accent); background: var(--surface); }
+.tsk-week-qadd-inp {
+  width: 100%; background: none; border: none; outline: none;
+  font-family: inherit; font-size: 11px; color: var(--text);
+}
+.tsk-week-qadd-inp::placeholder { color: var(--text-dim); }
+
+/* Section-picker popover (in-app replacement for bulk-move prompt) */
+.tsk-sec-pop {
+  position: absolute; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 5px; z-index: 50;
+  display: none; min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.tsk-sec-pop.open { display: block; }
+.tsk-sec-pop-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 4px; cursor: pointer;
+  font-size: 12px; color: var(--text); transition: background var(--tr);
+}
+.tsk-sec-pop-row:hover { background: var(--surface2); }
 
 /* Empty state */
 .tsk-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 16px; color: var(--text-dim); text-align: center; }
@@ -15652,11 +15773,13 @@ const TSK_PREF_KEY = 'tasks_pref_v1';
 
 const tskState = {
   view: 'today',          // 'today' | 'week' | 'list'
+  listLayout: 'rows',     // 'rows' | 'cols' — List view layout
   weekOffset: 0,
   search: '',
   searchOpen: false,
   selected: new Set(),
   editingId: null,
+  editingSection: null,   // sectionId | 'new' | null  (inline name editor)
   linkEditing: null,      // {kind:'chk'|'sub', id} | null
   showDone: { __all: false },  // per section
   collapsed: new Set(),   // sectionIds collapsed
@@ -15747,6 +15870,7 @@ function _tskFmtDay(iso) {
 function tskInit() {
   const pref = tskGetPref();
   if (pref.view) tskState.view = pref.view;
+  if (pref.listLayout === 'cols' || pref.listLayout === 'rows') tskState.listLayout = pref.listLayout;
   if (typeof pref.weekOffset === 'number') tskState.weekOffset = pref.weekOffset;
   tskExpandRecurring();   // generate any due recurring instances
   tskRender();
@@ -15832,6 +15956,12 @@ function _tskRenderHead() {
       </div>
       <div class="tsk-head-r">
         <span class="tsk-sync" id="tskSync" data-status="${tskSync.status}" title="Synced server-side">Saved</span>
+        ${v === 'list' ? `<button class="tsk-layout-btn" onclick="tskToggleListLayout()" title="Toggle horizontal columns / rows">
+          <span class="tsk-layout-ic">${tskState.listLayout === 'cols'
+            ? '<span></span><span></span><span></span>'
+            : '<span style="width:11px;height:3px"></span>'}</span>
+          ${tskState.listLayout === 'cols' ? 'Columns' : 'Rows'}
+        </button>` : ''}
         <div class="tsk-view-seg">
           <button class="tsk-view-btn${v==='today'?' on':''}" onclick="tskSetView('today')">Today <span class="tsk-view-btn-kbd">T</span></button>
           <button class="tsk-view-btn${v==='week'?' on':''}"  onclick="tskSetView('week')">Week <span class="tsk-view-btn-kbd">W</span></button>
@@ -15938,7 +16068,11 @@ function _tskRenderWeek() {
           </div>`;
         }).join('')}
       </div>
-      <button class="tsk-week-add" type="button" onclick="tskQuickAddOn('${dateStr}')">+ add</button>
+      <div class="tsk-week-qadd">
+        <input class="tsk-week-qadd-inp" type="text" placeholder="+ add task"
+          onkeydown="tskWeekQAddKey(event,'${dateStr}')"
+          autocomplete="off" spellcheck="false">
+      </div>
     </div>`;
   }).join('');
 
@@ -15969,6 +16103,7 @@ function _tskRenderList() {
   const all = tskGetAll().filter(t => !t.parentId);
   const term = (tskState.search || '').toLowerCase().trim();
   const tagMap = Object.fromEntries(tskGetTags().map(t => [t.id, t]));
+  const isCols = tskState.listLayout === 'cols';
 
   const groupsHtml = sections.map(sec => {
     let tasks = all.filter(t => (t.sectionId || 'inbox') === sec.id);
@@ -15982,23 +16117,43 @@ function _tskRenderList() {
     const done = tasks.filter(t => t.status === 'done');
     const showDone = !!tskState.showDone[sec.id];
     const collapsed = tskState.collapsed.has(sec.id);
-    return `<div class="tsk-sec${collapsed?' is-collapsed':''}" data-sec="${sec.id}"
-      ondragover="tskListSecDragOver(event,'${sec.id}')"
-      ondragleave="tskListSecDragLeave(event)"
-      ondrop="tskListSecDrop(event,'${sec.id}')">
+    const editing = tskState.editingSection === sec.id;
+
+    // Section header — inline edit when editing, otherwise normal display.
+    const headHtml = editing ? `
+      <div class="tsk-sec-edit-row">
+        <input class="tsk-sec-edit-color" id="tskSecEditColor_${sec.id}" type="color" value="${sec.color}">
+        <input class="tsk-sec-edit-inp" id="tskSecEditName_${sec.id}" type="text" value="${escG(sec.name)}"
+          onkeydown="if(event.key==='Enter'){tskSecEditSave('${sec.id}')}else if(event.key==='Escape'){tskSecEditCancel()}">
+        <button class="tsk-sec-edit-btn save" onclick="tskSecEditSave('${sec.id}')">Save</button>
+        <button class="tsk-sec-edit-btn" onclick="tskSecEditCancel()">Cancel</button>
+      </div>` : `
       <div class="tsk-sec-head">
         <span class="tsk-sec-chev" onclick="tskToggleSection('${sec.id}')">›</span>
         <span class="tsk-sec-dot" style="background:${sec.color}"></span>
         <span class="tsk-sec-name">${escG(sec.name)}</span>
         <span class="tsk-sec-count">${open.length}</span>
         <div class="tsk-sec-acts">
-          <button class="tsk-sec-act-btn" onclick="tskQuickAddOn(null,'${sec.id}')" title="Add task to this section">+ Add</button>
-          ${sec.id !== 'inbox' ? `<button class="tsk-sec-act-btn" onclick="tskRenameSection('${sec.id}')">Rename</button>
+          ${sec.id !== 'inbox' ? `<button class="tsk-sec-act-btn" onclick="tskSecEditStart('${sec.id}')" title="Rename / change color">Rename</button>
           <button class="tsk-sec-act-btn danger" onclick="tskDeleteSection('${sec.id}')">Delete</button>` : ''}
         </div>
-      </div>
+      </div>`;
+
+    return `<div class="tsk-sec${collapsed?' is-collapsed':''}" data-sec="${sec.id}"
+      ondragover="tskListSecDragOver(event,'${sec.id}')"
+      ondragleave="tskListSecDragLeave(event)"
+      ondrop="tskListSecDrop(event,'${sec.id}')">
+      ${headHtml}
       <div class="tsk-task-list">
-        ${open.length ? open.map(t => _tskRowHtml(t, {})).join('') : `<div class="tsk-empty" style="padding:14px 8px;border:1px dashed var(--border);border-radius:var(--r-sm);margin-top:6px"><span class="tsk-empty-text">No tasks here</span></div>`}
+        ${open.map(t => _tskRowHtml(t, {})).join('')}
+      </div>
+      <div class="tsk-inline-add">
+        <span class="tsk-inline-add-ic">+</span>
+        <input class="tsk-inline-add-inp" type="text"
+          placeholder="${open.length ? 'Add another…' : 'Add a task to ' + escG(sec.name) + '…'}"
+          onkeydown="tskInlineAddKey(event,'${sec.id}')"
+          autocomplete="off" spellcheck="false">
+        <span class="tsk-inline-add-hint">Enter</span>
       </div>
       ${done.length ? `<div class="tsk-sec-foot">
         <button class="tsk-show-done" onclick="tskState.showDone['${sec.id}']=!tskState.showDone['${sec.id}'];tskRender()">${showDone ? '▾' : '▸'} Done (${done.length})</button>
@@ -16007,8 +16162,20 @@ function _tskRenderList() {
     </div>`;
   }).join('');
 
-  const addSecBtn = `<button class="tsk-sec-act-btn" onclick="tskAddSection()" style="margin-top:8px">+ New section</button>`;
-  return groupsHtml + addSecBtn;
+  // New-section inline editor or trigger button (after all sections, full width even in cols mode).
+  const newSecHtml = tskState.editingSection === 'new' ? `
+    <div class="tsk-sec" style="grid-column: 1 / -1; max-height: none; min-height: 0">
+      <div class="tsk-sec-edit-row">
+        <input class="tsk-sec-edit-color" id="tskSecNewColor" type="color" value="#5b5bd6">
+        <input class="tsk-sec-edit-inp" id="tskSecNewName" type="text" placeholder="Section name…"
+          onkeydown="if(event.key==='Enter'){tskSecCreateSave()}else if(event.key==='Escape'){tskSecEditCancel()}">
+        <button class="tsk-sec-edit-btn save" onclick="tskSecCreateSave()">Create</button>
+        <button class="tsk-sec-edit-btn" onclick="tskSecEditCancel()">Cancel</button>
+      </div>
+    </div>` : `
+    <button class="tsk-sec-act-btn" onclick="tskSecCreateStart()" style="margin-top:${isCols?'4px':'8px'};${isCols?'grid-column: 1 / -1; justify-self: start':''}">+ New section</button>`;
+
+  return `<div class="${isCols ? 'tsk-list-cols' : ''}">${groupsHtml}${isCols ? newSecHtml : ''}</div>${isCols ? '' : newSecHtml}`;
 }
 
 // ── Group helper ────────────────────────────────────
@@ -16079,7 +16246,7 @@ function _tskRenderBulkBar() {
     <button class="tsk-bulk-act" onclick="tskBulkSchedule('${_tskTodayStr()}')">Today</button>
     <button class="tsk-bulk-act" onclick="tskBulkSchedule(ds(new Date(Date.now()+86400000)))">Tomorrow</button>
     <button class="tsk-bulk-act" onclick="tskBulkUnschedule()">Unschedule</button>
-    <button class="tsk-bulk-act" onclick="tskBulkSetSection()">Move…</button>
+    <button class="tsk-bulk-act" onclick="tskBulkSetSection(event)">Move…</button>
     <button class="tsk-bulk-act" onclick="tskBulkMarkDone()">Mark done</button>
     <div class="tsk-bulk-spacer"></div>
     <button class="tsk-bulk-act danger" onclick="tskBulkDelete()">Delete</button>
@@ -16432,37 +16599,118 @@ function tskMSave() {
 }
 function tskMDelete() {
   if (!TM.id) return;
-  if (!confirm('Delete this task and all its sub-tasks?')) return;
+  const subs = tskGetAll().filter(t => t.parentId === TM.id).length;
+  if (subs > 0) {
+    // Confirm via in-app popover when there are sub-tasks to be wiped too.
+    const menu = document.getElementById('tskSnoozeMenu');
+    menu.innerHTML = `<div style="padding:8px 10px;font-size:12px;color:var(--text)">
+        Delete this task and ${subs} sub-task${subs>1?'s':''}?
+      </div>
+      <div style="display:flex;gap:6px;padding:4px 8px 8px;justify-content:flex-end">
+        <button class="tsk-sec-edit-btn" onclick="tskCloseSnoozeMenu()">Cancel</button>
+        <button class="tsk-sec-edit-btn save" style="background:var(--red);border-color:var(--red);color:#fff" onclick="tskDeleteTask('${TM.id}');tskCloseSnoozeMenu();tskCloseModal()">Delete</button>
+      </div>`;
+    menu.style.minWidth = '260px'; menu.style.maxHeight = 'none'; menu.style.overflow = 'visible';
+    menu.style.left = '50%'; menu.style.transform = 'translateX(-50%)';
+    menu.style.top = '140px';
+    menu.classList.add('open');
+    return;
+  }
   tskDeleteTask(TM.id);
   tskCloseModal();
 }
 
-// ── Sections (add/rename/delete) ────────────────────
-function tskAddSection() {
-  const name = prompt('Section name:');
-  if (!name) return;
-  const sections = tskGetSections();
-  const palette = ['#5b5bd6','#22d3ee','#34d399','#fbbf24','#fb923c','#f472b6','#a78bfa','#60a5fa'];
-  const color = palette[sections.length % palette.length];
-  sections.push({ id: _tskUid('s'), name: name.trim(), color, order: sections.length });
-  tskSaveSections(sections); tskRender();
+// ── Sections (in-app add/rename/delete; no native prompts) ────────────────────
+function tskToggleListLayout() {
+  tskState.listLayout = tskState.listLayout === 'cols' ? 'rows' : 'cols';
+  tskSavePref({ listLayout: tskState.listLayout });
+  tskRender();
 }
-function tskRenameSection(id) {
-  const sections = tskGetSections();
-  const sec = sections.find(s => s.id === id); if (!sec) return;
-  const name = prompt('Rename section:', sec.name);
-  if (!name) return;
-  sec.name = name.trim();
-  tskSaveSections(sections); tskRender();
+function tskSecCreateStart() {
+  tskState.editingSection = 'new';
+  tskRender();
+  setTimeout(() => document.getElementById('tskSecNewName')?.focus(), 30);
 }
+function tskSecCreateSave() {
+  const name = (document.getElementById('tskSecNewName')?.value || '').trim();
+  if (!name) { document.getElementById('tskSecNewName')?.focus(); return; }
+  const color = document.getElementById('tskSecNewColor')?.value || '#5b5bd6';
+  const sections = tskGetSections();
+  sections.push({ id: _tskUid('s'), name, color, order: sections.length });
+  tskState.editingSection = null;
+  tskSaveSections(sections);
+  tskRender();
+}
+function tskSecEditStart(id) {
+  tskState.editingSection = id;
+  tskRender();
+  setTimeout(() => {
+    const el = document.getElementById('tskSecEditName_' + id);
+    if (el) { el.focus(); el.select(); }
+  }, 30);
+}
+function tskSecEditSave(id) {
+  const nameEl = document.getElementById('tskSecEditName_' + id);
+  const colEl  = document.getElementById('tskSecEditColor_' + id);
+  if (!nameEl) return;
+  const name = (nameEl.value || '').trim();
+  if (!name) { nameEl.focus(); return; }
+  const sections = tskGetSections();
+  const sec = sections.find(s => s.id === id);
+  if (sec) { sec.name = name; if (colEl) sec.color = colEl.value; }
+  tskState.editingSection = null;
+  tskSaveSections(sections);
+  tskRender();
+}
+function tskSecEditCancel() { tskState.editingSection = null; tskRender(); }
 function tskDeleteSection(id) {
   if (id === 'inbox') return;
-  if (!confirm('Delete this section? Tasks in it move to Inbox.')) return;
+  // In-app confirm via the snooze-menu popover infrastructure.
+  const sections = tskGetSections();
+  const sec = sections.find(s => s.id === id); if (!sec) return;
+  const menu = document.getElementById('tskSnoozeMenu');
+  menu.innerHTML = `<div style="padding:8px 10px;font-size:12px;color:var(--text)">
+      Delete <b>${escG(sec.name)}</b>? Tasks in it move to Inbox.
+    </div>
+    <div style="display:flex;gap:6px;padding:4px 8px 8px;justify-content:flex-end">
+      <button class="tsk-sec-edit-btn" onclick="tskCloseSnoozeMenu()">Cancel</button>
+      <button class="tsk-sec-edit-btn save" style="background:var(--red);border-color:var(--red);color:#fff" onclick="tskDeleteSectionConfirm('${id}')">Delete</button>
+    </div>`;
+  menu.style.minWidth = '260px'; menu.style.maxHeight = 'none'; menu.style.overflow = 'visible';
+  menu.style.left = '50%'; menu.style.transform = 'translateX(-50%)';
+  menu.style.top = '120px';
+  menu.classList.add('open');
+}
+function tskDeleteSectionConfirm(id) {
   const sections = tskGetSections().filter(s => s.id !== id);
   const tasks = tskGetAll();
   tasks.forEach(t => { if (t.sectionId === id) t.sectionId = 'inbox'; });
   _tskWrite(TSK_KEY, tasks);
-  tskSaveSections(sections); tskRender();
+  tskSaveSections(sections);
+  tskCloseSnoozeMenu();
+  tskRender();
+}
+// Inline quick-add per section (Enter → create task in that section)
+function tskInlineAddKey(ev, sectionId) {
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  const inp = ev.target;
+  const text = (inp.value || '').trim();
+  if (!text) return;
+  tskQuickAdd(text, { sectionId });
+  inp.value = '';
+  setTimeout(() => inp.focus(), 0);  // chain-add: keep focus for fast entry
+}
+// Inline quick-add per Week day (Enter → create task scheduled for that day)
+function tskWeekQAddKey(ev, dateStr) {
+  if (ev.key !== 'Enter') return;
+  ev.preventDefault();
+  const inp = ev.target;
+  const text = (inp.value || '').trim();
+  if (!text) return;
+  tskQuickAdd(text, { scheduledOn: dateStr });
+  inp.value = '';
+  setTimeout(() => inp.focus(), 0);
 }
 
 // ── Drag & drop ─────────────────────────────────────
@@ -16535,14 +16783,33 @@ function tskBulkUnschedule() {
   ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) { t.scheduledOn = null; t.scheduledTime = null; } });
   tskSaveAll(tasks); tskState.selected.clear(); tskRender();
 }
-function tskBulkSetSection() {
+function tskBulkSetSection(ev) {
   const ids = [...tskState.selected]; if (!ids.length) return;
-  const opts = tskGetSections().map(s => s.name).join(' / ');
-  const name = prompt(`Move to section (${opts}):`); if (!name) return;
-  const sec = tskGetSections().find(s => s.name.toLowerCase() === name.toLowerCase()); if (!sec) { toast('Unknown section', 'err'); return; }
+  const menu = document.getElementById('tskSnoozeMenu');
+  const sections = tskGetSections();
+  menu.innerHTML = `<div class="tsk-picker-head">Move ${ids.length} task${ids.length>1?'s':''} to…</div>` +
+    sections.map(s => `<div class="tsk-sec-pop-row" onclick="tskBulkSetSectionDo('${s.id}')">
+      <span style="width:8px;height:8px;border-radius:50%;background:${s.color};flex-shrink:0"></span>
+      <span>${escG(s.name)}</span>
+    </div>`).join('');
+  menu.style.minWidth = '220px'; menu.style.maxHeight = '320px'; menu.style.overflow = 'auto';
+  // Position near the click if possible
+  if (ev && ev.currentTarget) {
+    const r = ev.currentTarget.getBoundingClientRect();
+    menu.style.transform = ''; menu.style.left = Math.max(10, r.left) + 'px';
+    menu.style.top = (r.top - 8 + window.scrollY - 200) + 'px';
+  } else {
+    menu.style.left = '50%'; menu.style.transform = 'translateX(-50%)';
+    menu.style.top = '120px';
+  }
+  menu.classList.add('open');
+  setTimeout(() => document.addEventListener('click', tskCloseSnoozeMenu, { once: true }), 0);
+}
+function tskBulkSetSectionDo(secId) {
+  const ids = [...tskState.selected];
   const tasks = tskGetAll();
-  ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) t.sectionId = sec.id; });
-  tskSaveAll(tasks); tskState.selected.clear(); tskRender();
+  ids.forEach(id => { const t = tasks.find(x => x.id === id); if (t) t.sectionId = secId; });
+  tskSaveAll(tasks); tskState.selected.clear(); tskCloseSnoozeMenu(); tskRender();
 }
 function tskBulkMarkDone() {
   const ids = [...tskState.selected]; if (!ids.length) return;
@@ -16552,10 +16819,24 @@ function tskBulkMarkDone() {
 }
 function tskBulkDelete() {
   const ids = [...tskState.selected]; if (!ids.length) return;
-  if (!confirm(`Delete ${ids.length} task${ids.length>1?'s':''} (and their sub-tasks)?`)) return;
+  const menu = document.getElementById('tskSnoozeMenu');
+  menu.innerHTML = `<div style="padding:8px 10px;font-size:12px;color:var(--text)">
+      Delete ${ids.length} task${ids.length>1?'s':''} and any sub-tasks?
+    </div>
+    <div style="display:flex;gap:6px;padding:4px 8px 8px;justify-content:flex-end">
+      <button class="tsk-sec-edit-btn" onclick="tskCloseSnoozeMenu()">Cancel</button>
+      <button class="tsk-sec-edit-btn save" style="background:var(--red);border-color:var(--red);color:#fff" onclick="tskBulkDeleteDo()">Delete</button>
+    </div>`;
+  menu.style.minWidth = '260px'; menu.style.maxHeight = 'none'; menu.style.overflow = 'visible';
+  menu.style.left = '50%'; menu.style.transform = 'translateX(-50%)';
+  menu.style.top = '140px';
+  menu.classList.add('open');
+}
+function tskBulkDeleteDo() {
+  const ids = [...tskState.selected];
   const idSet = new Set(ids);
   const tasks = tskGetAll().filter(t => !idSet.has(t.id) && !idSet.has(t.parentId));
-  tskSaveAll(tasks); tskState.selected.clear(); tskRender();
+  tskSaveAll(tasks); tskState.selected.clear(); tskCloseSnoozeMenu(); tskRender();
 }
 
 // ── Keyboard shortcuts ──────────────────────────────
