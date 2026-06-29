@@ -1,0 +1,23 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="36" y1="28" x2="214" y2="228" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AAB2FF"/>
+      <stop offset="0.48" stop-color="#7C86F8"/>
+      <stop offset="1" stop-color="#57D8B7"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="72" y1="72" x2="196" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white"/>
+      <stop offset="1" stop-color="#EAFBFF"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="256" height="256" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.486 0 0 0 0 0.525 0 0 0 0 0.973 0 0 0 0.35 0"/>
+    </filter>
+  </defs>
+  <circle cx="128" cy="128" r="92" fill="url(#bg)" opacity="0.16" filter="url(#glow)"/>
+  <rect x="42" y="30" width="172" height="196" rx="44" fill="url(#bg)"/>
+  <rect x="54" y="42" width="148" height="172" rx="34" fill="rgba(16,19,26,0.16)"/>
+  <path d="M78 82C78 69.8497 87.8497 60 100 60H173C181.837 60 189 67.1634 189 76C189 79.3784 187.923 82.6688 185.925 85.3028L116.455 176.812C114.698 179.126 116.349 182.5 119.255 182.5H175C183.837 182.5 191 189.663 191 198.5C191 207.337 183.837 214.5 175 214.5H93C80.8497 214.5 71 204.65 71 192.5C71 187.677 72.5768 182.986 75.4899 179.144L145.026 87.4389C146.783 85.1246 145.131 81.75 142.226 81.75H100C87.8497 81.75 78 71.9003 78 59.75V82Z" fill="url(#stroke)"/>
+  <path d="M90 78H176" stroke="rgba(255,255,255,0.22)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M82 188H168" stroke="rgba(255,255,255,0.14)" stroke-width="10" stroke-linecap="round"/>
+</svg>

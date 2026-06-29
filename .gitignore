@@ -1,0 +1,50 @@
+# Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Node / playwright
+node_modules/
+playwright-report/
+test-results/
+.playwright/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.claude/
+
+# Local data — never commit DBs, secrets, or user content
+*.db
+*.sqlite
+*.sqlite3
+data/
+.data/
+
+# Personal wiki content (per user choice)
+wiki/
+
+# Large local dashboards / unrelated artifacts
+Deploy Control Dashboard.html
+
+# Logs
+*.log
+logs/

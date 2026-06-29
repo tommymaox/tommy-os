@@ -1,0 +1,12 @@
+{
+  "name": "zuyu-dashboard",
+  "private": true,
+  "scripts": {
+    "check:frontend": "node --check static/js/zuyu-runtime.js && sed -n '/<script>/,/<\\/script>/p' static/index.html | sed '1d;$d' > /tmp/zuyu_app.js && node --check /tmp/zuyu_app.js",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "typescript": "^5.9.2"
+  }
+}
