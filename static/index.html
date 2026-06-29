@@ -2889,30 +2889,29 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 .tsk-layout-ic { display: inline-flex; gap: 2px; }
 .tsk-layout-ic span { width: 3px; height: 11px; background: currentColor; border-radius: 1px; opacity: 0.6; }
 
-/* List view — Columns layout (horizontal, wraps to rows when narrow) */
+/* List view — Columns layout (CSS columns masonry: sections fill vertically
+   then wrap to the next column, so no blank space below short sections). */
 .tsk-list-cols {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  align-items: start;
+  column-width: 300px;
+  column-gap: 12px;
 }
 .tsk-list-cols .tsk-sec {
-  margin-bottom: 0;
+  display: inline-block;       /* required so column flow treats each as one block */
+  width: 100%;
+  margin: 0 0 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 10px 12px 8px;
-  display: flex; flex-direction: column;
-  max-height: calc(100vh - 280px);
-  min-height: 140px;
-  overflow: hidden;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
 }
 .tsk-list-cols .tsk-sec-head {
   padding: 2px 0 8px;
   margin-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
-.tsk-list-cols .tsk-task-list { flex: 1; overflow-y: auto; min-height: 0; padding-right: 2px; }
 .tsk-list-cols .tsk-task { padding: 6px 6px; gap: 8px; min-height: 32px; }
 .tsk-list-cols .tsk-task-title { font-size: 12.5px; }
 .tsk-list-cols .tsk-task-meta { font-size: 10.5px; }
@@ -3007,8 +3006,88 @@ table.tbl tbody tr[data-selected="true"] td:first-child { box-shadow: inset 2px 
 .tsk-act-btn:hover { color: var(--text); border-color: var(--border); background: var(--surface); }
 .tsk-act-btn.starred { color: var(--sulfur, #fbbf24); opacity: 1 !important; }
 
-/* Subtask collapse */
-.tsk-subs { padding-left: 36px; display: flex; flex-direction: column; gap: 1px; margin-top: -1px; }
+/* Subtasks displayed inline on the main view */
+.tsk-task-expand {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--text-dim); font-size: 11px; line-height: 1;
+  display: inline-flex; align-items: center; gap: 3px;
+  transition: color var(--tr);
+}
+.tsk-task-expand:hover { color: var(--text); }
+.tsk-task-expand-ic { display: inline-block; transition: transform var(--tr); width: 8px; text-align: center; }
+.tsk-task-expand.on .tsk-task-expand-ic { transform: rotate(90deg); }
+.tsk-task-add-sub {
+  background: none; border: 1px dashed transparent; padding: 1px 6px;
+  color: var(--text-dim); font-size: 10.5px; cursor: pointer; font-family: inherit;
+  border-radius: 3px; line-height: 1.3; opacity: 0;
+  transition: all var(--tr);
+}
+.tsk-task:hover .tsk-task-add-sub { opacity: 0.7; }
+.tsk-task-add-sub:hover { opacity: 1; color: var(--text); border-color: var(--border); background: var(--surface); }
+.tsk-subs {
+  margin: 1px 0 4px 30px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 1px;
+}
+.tsk-sub {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--tr);
+}
+.tsk-sub:hover { background: var(--surface2); }
+.tsk-sub.is-done .tsk-sub-title { color: var(--text-dim); text-decoration: line-through; }
+.tsk-sub-chk {
+  width: 13px; height: 13px;
+  border: 1.5px solid var(--border-h); border-radius: 3px;
+  background: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--tr);
+}
+.tsk-sub-chk:hover { border-color: var(--text-sec); }
+.tsk-sub-chk.on { background: var(--accent); border-color: var(--accent); }
+.tsk-sub-chk.on::after { content: '✓'; font-size: 8px; color: var(--bg); font-weight: 700; line-height: 1; }
+.tsk-sub-title { font-size: 12px; color: var(--text); min-width: 0; word-break: break-word; line-height: 1.35; }
+.tsk-sub-del {
+  background: none; border: none; cursor: pointer; color: var(--text-dim);
+  font-size: 11px; padding: 2px 5px; opacity: 0;
+  border-radius: 3px; transition: opacity var(--tr), color var(--tr);
+}
+.tsk-sub:hover .tsk-sub-del { opacity: 1; }
+.tsk-sub-del:hover { color: var(--red); }
+.tsk-sub-add {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px;
+  border: 1px dashed transparent; border-radius: 4px;
+  transition: border-color var(--tr), background var(--tr);
+}
+.tsk-sub-add:hover, .tsk-sub-add:focus-within { border-color: var(--border); }
+.tsk-sub-add:focus-within { border-style: solid; border-color: var(--accent); background: var(--surface); }
+.tsk-sub-add-ic { color: var(--text-dim); font-size: 11px; line-height: 1; }
+.tsk-sub-add-inp { flex: 1; background: none; border: none; outline: none; font-family: inherit; font-size: 12px; color: var(--text); }
+.tsk-sub-add-inp::placeholder { color: var(--text-dim); }
+
+/* Inline picker section (Today view's "Unscheduled" list) */
+.tsk-sec-picker { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 4px; margin-bottom: 22px; }
+.tsk-sec-picker .tsk-sec-head { padding: 6px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.tsk-picker-task {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--tr);
+  font-size: 12.5px;
+}
+.tsk-picker-task:hover { background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--text); }
+.tsk-picker-task-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tsk-picker-task-sec { font-size: 10.5px; color: var(--text-dim); display: inline-flex; align-items: center; gap: 4px; }
+.tsk-picker-task-add { color: var(--accent); font-family: var(--mono); font-size: 11px; opacity: 0; transition: opacity var(--tr); }
+.tsk-picker-task:hover .tsk-picker-task-add { opacity: 1; }
+.tsk-sec-picker-empty { padding: 10px 12px; font-size: 11.5px; color: var(--text-dim); }
 .tsk-sec-foot { padding: 6px 0 0; }
 .tsk-show-done {
   background: none; border: none; padding: 4px 0; font-family: inherit;
@@ -15783,6 +15862,8 @@ const tskState = {
   linkEditing: null,      // {kind:'chk'|'sub', id} | null
   showDone: { __all: false },  // per section
   collapsed: new Set(),   // sectionIds collapsed
+  expanded: new Set(),    // taskIds whose subtasks are shown inline
+  addingSubFor: null,     // taskId currently revealing the inline subtask input
   picker: null,           // {dateStr} when picker is open
   snoozeMenu: null,       // taskId when snooze menu is open
 };
@@ -16012,20 +16093,43 @@ function _tskRenderToday() {
   const dateLabel = date.toLocaleDateString('en-AU', { weekday:'long', day:'numeric', month:'long' });
   const showDoneToday = !!tskState.showDone['__today'];
 
+  // Unscheduled inline picker — every open task without a date, click to add to today.
+  const unscheduled = all.filter(t => t.status === 'open' && !t.scheduledOn);
+  const sectionMap = Object.fromEntries(tskGetSections().map(s => [s.id, s]));
+  const unschedHtml = unscheduled.length ? `
+    <div class="tsk-sec tsk-sec-picker">
+      <div class="tsk-sec-head">
+        <span class="tsk-sec-dot" style="background:var(--text-dim)"></span>
+        <span class="tsk-sec-name">Unscheduled — click to add to today</span>
+        <span class="tsk-sec-count">${unscheduled.length}</span>
+      </div>
+      ${unscheduled.map(u => {
+        const s = sectionMap[u.sectionId] || sectionMap.inbox;
+        return `<div class="tsk-picker-task" onclick="tskScheduleTask('${u.id}','${today}')" title="Schedule for today">
+          <div class="tsk-picker-task-title">${escG(u.title)}</div>
+          <div class="tsk-picker-task-sec"><span style="width:6px;height:6px;border-radius:50%;background:${s.color}"></span>${escG(s.name)}</div>
+          <span class="tsk-picker-task-add">+ today</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
   const sectionsHtml = [
     overdue.length ? _tskGroupHtml('overdue', `Overdue · ${overdue.length}`, '#f25458', overdue, { isOverdue: true, dateStr: today }) : '',
-    _tskGroupHtml('today', `Today · ${todayOpen.length}`, '#5b5bd6', todayOpen, { dateStr: today, allowPick: true }),
+    _tskGroupHtml('today', `Today · ${todayOpen.length}`, '#5b5bd6', todayOpen, { dateStr: today }),
     todayDone.length ? `<div class="tsk-sec">
       <button class="tsk-show-done" onclick="tskState.showDone['__today']=!tskState.showDone['__today'];tskRender()">${showDoneToday ? '▾' : '▸'} Done today (${todayDone.length})</button>
       ${showDoneToday ? `<div class="tsk-task-list">${todayDone.map(t => _tskRowHtml(t, {})).join('')}</div>` : ''}
     </div>` : '',
   ].join('');
 
+  const empty = !overdue.length && !todayOpen.length && !todayDone.length;
   return `
     <div class="tsk-period-bar">
       <span class="tsk-period-label">${dateLabel}</span>
     </div>
-    ${sectionsHtml || _tskEmpty('Nothing for today.', 'Pick from list', "tskState.view='list';tskRender()")}
+    ${sectionsHtml}
+    ${empty && !unscheduled.length ? _tskEmpty('Nothing for today.', 'Add a task', "document.getElementById('tskQAdd')?.focus()") : ''}
+    ${unschedHtml}
   `;
 }
 
@@ -16145,7 +16249,7 @@ function _tskRenderList() {
       ondrop="tskListSecDrop(event,'${sec.id}')">
       ${headHtml}
       <div class="tsk-task-list">
-        ${open.map(t => _tskRowHtml(t, {})).join('')}
+        ${open.map(t => _tskRowHtml(t, { hideSection: true })).join('')}
       </div>
       <div class="tsk-inline-add">
         <span class="tsk-inline-add-ic">+</span>
@@ -16157,7 +16261,7 @@ function _tskRenderList() {
       </div>
       ${done.length ? `<div class="tsk-sec-foot">
         <button class="tsk-show-done" onclick="tskState.showDone['${sec.id}']=!tskState.showDone['${sec.id}'];tskRender()">${showDone ? '▾' : '▸'} Done (${done.length})</button>
-        ${showDone ? `<div class="tsk-task-list">${done.map(t => _tskRowHtml(t, {})).join('')}</div>` : ''}
+        ${showDone ? `<div class="tsk-task-list">${done.map(t => _tskRowHtml(t, { hideSection: true })).join('')}</div>` : ''}
       </div>` : ''}
     </div>`;
   }).join('');
@@ -16195,6 +16299,8 @@ function _tskGroupHtml(key, label, color, tasks, opts) {
 
 // ── Row helper ──────────────────────────────────────
 function _tskRowHtml(t, opts) {
+  opts = opts || {};
+  const hideSection = !!opts.hideSection;
   const sec = tskGetSections().find(s => s.id === t.sectionId) || tskGetSections()[0];
   const tagMap = Object.fromEntries(tskGetTags().map(x => [x.id, x]));
   const tags = (t.tags || []).map(id => tagMap[id]).filter(Boolean);
@@ -16203,6 +16309,7 @@ function _tskRowHtml(t, opts) {
   const checkDone = (t.checklist||[]).filter(x => x.done).length;
   const isSelected = tskState.selected.has(t.id);
   const today = _tskTodayStr();
+  const isExpanded = tskState.expanded.has(t.id);
 
   const meta = [];
   if (t.scheduledOn && t.scheduledOn !== today) {
@@ -16210,13 +16317,16 @@ function _tskRowHtml(t, opts) {
     meta.push(`<span class="tsk-meta-date${isLate?' is-overdue':''}">⌚ ${_tskFmtDay(t.scheduledOn)}</span>`);
   }
   if (t.scheduledTime) meta.push(`<span class="tsk-meta-time">${_tskFmtTime(t.scheduledTime)}</span>`);
-  if (sec && sec.id !== 'inbox') meta.push(`<span class="tsk-meta-section" style="color:${sec.color}">● ${escG(sec.name)}</span>`);
-  if (subs.length) meta.push(`<span class="tsk-meta-sub">↳ ${subDone}/${subs.length}</span>`);
+  // Only show section meta when NOT already grouped by that section (Today/Week mix sections; List doesn't).
+  if (!hideSection && sec && sec.id !== 'inbox') meta.push(`<span class="tsk-meta-section" style="color:${sec.color}">● ${escG(sec.name)}</span>`);
+  if (subs.length) {
+    meta.push(`<button class="tsk-task-expand${isExpanded?' on':''}" onclick="event.stopPropagation();tskToggleExpand('${t.id}')" title="${isExpanded?'Hide':'Show'} sub-tasks"><span class="tsk-task-expand-ic">›</span>${subDone}/${subs.length} sub</button>`);
+  }
   if (t.checklist && t.checklist.length) meta.push(`<span class="tsk-meta-sub">☐ ${checkDone}/${t.checklist.length}</span>`);
   if (t.recurring) meta.push(`<span class="tsk-meta-recur">↻ ${t.recurring}</span>`);
   tags.forEach(tg => meta.push(`<span class="tsk-meta-tag" style="color:${tg.color}">${escG(tg.name)}</span>`));
 
-  return `<div class="tsk-task${t.status==='done'?' is-done':''}${isSelected?' is-selected':''}"
+  const rowHtml = `<div class="tsk-task${t.status==='done'?' is-done':''}${isSelected?' is-selected':''}"
     draggable="true" data-tid="${t.id}"
     ondragstart="tskListTaskDragStart(event,'${t.id}')"
     ondragend="tskListTaskDragEnd(event)"
@@ -16231,11 +16341,84 @@ function _tskRowHtml(t, opts) {
       ${meta.length ? `<div class="tsk-task-meta">${meta.join('')}</div>` : ''}
     </div>
     <div class="tsk-task-acts">
+      <button class="tsk-task-add-sub" onclick="event.stopPropagation();tskInlineSubStart('${t.id}')" title="Add sub-task">+ sub</button>
       <button class="tsk-act-btn${t.starred?' starred':''}" onclick="event.stopPropagation();tskToggleStar('${t.id}')" title="Star">★</button>
       <button class="tsk-act-btn" onclick="event.stopPropagation();tskOpenSnoozeMenu(event,'${t.id}')" title="Snooze">⏰</button>
       <button class="tsk-act-btn" onclick="event.stopPropagation();tskDeleteTask('${t.id}')" title="Delete">✕</button>
     </div>
   </div>`;
+
+  // Inline subtask block — visible when expanded OR when the user just clicked "+ sub" on this task.
+  const showSubs = isExpanded || tskState.addingSubFor === t.id;
+  if (!showSubs || (!subs.length && tskState.addingSubFor !== t.id)) return rowHtml;
+  const subsHtml = subs.map(s => `<div class="tsk-sub${s.status==='done'?' is-done':''}" data-tid="${s.id}"
+      onclick="if(event.target.closest('button'))return;tskOpenModal('${s.id}')">
+      <button class="tsk-sub-chk${s.status==='done'?' on':''}" type="button" onclick="event.stopPropagation();tskToggleDone('${s.id}')" title="Mark done"></button>
+      <div class="tsk-sub-title">${escG(s.title)}</div>
+      <button class="tsk-sub-del" type="button" onclick="event.stopPropagation();tskDeleteTask('${s.id}')" title="Delete">✕</button>
+    </div>`).join('');
+  const addSubInput = tskState.addingSubFor === t.id ? `
+    <div class="tsk-sub-add">
+      <span class="tsk-sub-add-ic">↳</span>
+      <input class="tsk-sub-add-inp" id="tskSubAddInp_${t.id}" type="text" placeholder="New sub-task — Enter to add, Esc to close"
+        autocomplete="off" spellcheck="false"
+        onkeydown="tskInlineSubKey(event,'${t.id}')"
+        onblur="tskInlineSubBlur('${t.id}')">
+    </div>` : '';
+  return rowHtml + `<div class="tsk-subs">${subsHtml}${addSubInput}</div>`;
+}
+
+// Inline subtask helpers
+function tskToggleExpand(id) {
+  if (tskState.expanded.has(id)) tskState.expanded.delete(id);
+  else tskState.expanded.add(id);
+  tskRender();
+}
+function tskInlineSubStart(parentId) {
+  // Make sure the parent's subtasks are visible
+  tskState.expanded.add(parentId);
+  tskState.addingSubFor = parentId;
+  tskRender();
+  setTimeout(() => document.getElementById('tskSubAddInp_' + parentId)?.focus(), 30);
+}
+function tskInlineSubKey(ev, parentId) {
+  if (ev.key === 'Enter' && !ev.shiftKey) {
+    ev.preventDefault();
+    const inp = ev.target;
+    const text = (inp.value || '').trim();
+    if (!text) { tskState.addingSubFor = null; tskRender(); return; }
+    const tasks = tskGetAll();
+    const parent = tasks.find(t => t.id === parentId);
+    tasks.push({
+      id: _tskUid('t'), title: text,
+      sectionId: parent ? parent.sectionId : 'inbox',
+      scheduledOn: null, scheduledTime: null,
+      starred: false, tags: [], checklist: [],
+      parentId, links: [], notes: '',
+      status: 'open', createdAt: new Date().toISOString(), completedAt: null,
+      order: Date.now(), recurring: ''
+    });
+    tskSaveAll(tasks);
+    inp.value = '';
+    tskState.addingSubFor = parentId;  // stay in add mode for chain-add
+    tskRender();
+    setTimeout(() => document.getElementById('tskSubAddInp_' + parentId)?.focus(), 0);
+  } else if (ev.key === 'Escape') {
+    ev.preventDefault();
+    tskState.addingSubFor = null;
+    tskRender();
+  }
+}
+function tskInlineSubBlur(parentId) {
+  // Close the inline input on blur after a tick (so click-on-button still works)
+  setTimeout(() => {
+    if (tskState.addingSubFor !== parentId) return;
+    const inp = document.getElementById('tskSubAddInp_' + parentId);
+    if (inp && document.activeElement !== inp) {
+      tskState.addingSubFor = null;
+      tskRender();
+    }
+  }, 150);
 }
 
 // ── Bulk action bar ─────────────────────────────────
