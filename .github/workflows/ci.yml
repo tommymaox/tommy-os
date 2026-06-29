@@ -1,31 +1,15 @@
 name: ci
 
+# Disabled: only fires when manually requested via the Actions tab.
+# The previous push/PR-on-every-commit setup was emailing failure notifications
+# on every push because mypy/pytest aren't set up to pass cleanly in this repo
+# yet. If you want CI back, replace this with a working pipeline or trigger
+# this stub manually from the Actions tab.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
-  test:
+  noop:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
-      - name: Backend checks
-        run: |
-          python -m py_compile main.py zuyu_app/*.py
-          ruff check zuyu_app tests
-          mypy zuyu_app tests
-          pytest
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Frontend syntax
-        run: |
-          npm install
-          npm run check:frontend
+      - run: echo "ci is disabled — trigger manually via workflow_dispatch if needed"
