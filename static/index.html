@@ -16054,6 +16054,9 @@ function _tskRenderHead() {
       </div>
       <div class="tsk-head-r">
         <span class="tsk-sync" id="tskSync" data-status="${tskSync.status}" title="Synced server-side">Saved</span>
+        <button class="tsk-layout-btn" onclick="tskOpenIcsPanel(event)" title="Subscribe in Outlook / Google / Apple Calendar">
+          <span style="font-size:13px;line-height:1">📅</span> Calendar feed
+        </button>
         ${v === 'list' ? `<button class="tsk-layout-btn" onclick="tskToggleListLayout()" title="Toggle horizontal columns / rows">
           <span class="tsk-layout-ic">${tskState.listLayout === 'cols'
             ? '<span></span><span></span><span></span>'
@@ -17055,6 +17058,105 @@ document.addEventListener('keydown', function(ev) {
   else if (ev.key === 'l') tskSetView('list');
   else if (ev.key === 'Escape') { if (tskState.searchOpen) { tskState.searchOpen = false; tskState.search = ''; tskRender(); } }
 });
+// ── ICS calendar feed (push tasks to Outlook / Apple / Google Calendar) ──
+async function tskOpenIcsPanel(ev) {
+  const menu = document.getElementById('tskSnoozeMenu');
+  menu.innerHTML = `<div style="padding:10px 12px;font-size:11.5px;color:var(--text-dim)">Fetching feed URL…</div>`;
+  menu.style.minWidth = '380px'; menu.style.maxHeight = 'none'; menu.style.overflow = 'visible';
+  if (ev && ev.currentTarget) {
+    const r = ev.currentTarget.getBoundingClientRect();
+    menu.style.transform = '';
+    menu.style.left = Math.max(10, Math.min(window.innerWidth - 400, r.right - 380)) + 'px';
+    menu.style.top  = (r.bottom + 6 + window.scrollY) + 'px';
+  } else {
+    menu.style.left = '50%'; menu.style.transform = 'translateX(-50%)';
+    menu.style.top = '120px';
+  }
+  menu.classList.add('open');
+  setTimeout(() => document.addEventListener('click', tskCloseSnoozeMenu, { once: true }), 0);
+
+  let token = null;
+  try {
+    const r = await api('/api/tasks/calendar-token');
+    token = r && r.token;
+  } catch (e) {
+    menu.innerHTML = `<div style="padding:12px;color:var(--red);font-size:12px">Couldn't reach the server. Try again.</div>`;
+    return;
+  }
+  if (!token) { menu.innerHTML = `<div style="padding:12px;font-size:12px">Server didn't return a token.</div>`; return; }
+
+  const url = `${window.location.origin}/api/tasks/${token}.ics`;
+  // Outlook web's "Add from web" deep link
+  const outlookSub = `https://outlook.live.com/calendar/0/addfromweb?name=${encodeURIComponent('tommy-os Tasks')}&url=${encodeURIComponent(url)}`;
+  const googleSub  = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(url)}`;
+  menu.innerHTML = `
+    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:0.85rem;font-weight:500;color:var(--text)">📅 Tasks calendar feed</div>
+      <div style="font-size:11.5px;color:var(--text-dim);line-height:1.5">
+        One-way feed: tasks you schedule appear in your calendar. Most clients refresh every 3–24 hours.
+      </div>
+      <div style="display:flex;gap:6px">
+        <input id="tskIcsUrl" readonly value="${escG(url)}"
+          style="flex:1;min-width:0;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--mono);font-size:11px;outline:none"
+          onclick="this.select()">
+        <button class="tsk-sec-edit-btn save" type="button" onclick="tskCopyIcsUrl()">Copy</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <a class="tsk-sec-edit-btn" href="${outlookSub}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">↗ Add to Outlook web</a>
+        <a class="tsk-sec-edit-btn" href="${googleSub}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">↗ Add to Google Calendar</a>
+      </div>
+      <details style="font-size:11.5px;color:var(--text-sec)">
+        <summary style="cursor:pointer;color:var(--text-sec)">Manual setup instructions</summary>
+        <div style="margin-top:6px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);line-height:1.55">
+          <b style="color:var(--text)">Outlook desktop / Outlook on the web:</b><br>
+          1. Calendar view → <b>Add calendar</b> → <b>Subscribe from web</b><br>
+          2. Paste the URL above, name it "tommy-os Tasks", and save.<br><br>
+          <b style="color:var(--text)">Apple Calendar (Mac/iPhone):</b><br>
+          • Mac: <b>File → New Calendar Subscription</b> → paste URL.<br>
+          • iPhone: <b>Settings → Calendar → Accounts → Add Account → Other → Add Subscribed Calendar</b>.<br><br>
+          <b style="color:var(--text)">Google Calendar:</b><br>
+          • Left sidebar → <b>Other calendars → + → From URL</b> → paste URL.
+        </div>
+      </details>
+      <div style="font-size:10.5px;color:var(--text-dim);line-height:1.5;border-top:1px solid var(--border);padding-top:8px">
+        ⚠ Anyone with this URL can read your tasks — keep it private.
+        <a href="javascript:void(0)" onclick="tskRotateIcsToken()" style="color:var(--accent);text-decoration:none">Generate new URL</a> (invalidates current subscriptions).
+      </div>
+    </div>`;
+  // Prevent outside-click handler from closing the panel when interacting inside it
+  menu.onclick = function(e) { e.stopPropagation(); };
+}
+
+function tskCopyIcsUrl() {
+  const el = document.getElementById('tskIcsUrl');
+  if (!el) return;
+  el.select();
+  try { document.execCommand('copy'); toast('URL copied'); }
+  catch (e) { navigator.clipboard?.writeText(el.value).then(() => toast('URL copied')); }
+}
+
+async function tskRotateIcsToken() {
+  // In-app confirm popover (no native confirm() — matches the rest of Tasks).
+  const menu = document.getElementById('tskSnoozeMenu');
+  menu.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--text);line-height:1.5">
+      Generate a new feed URL?<br>
+      <span style="color:var(--text-dim);font-size:11px">Any existing calendar subscriptions will stop receiving updates and you'll need to re-subscribe.</span>
+    </div>
+    <div style="display:flex;gap:6px;padding:4px 10px 10px;justify-content:flex-end">
+      <button class="tsk-sec-edit-btn" onclick="tskCloseSnoozeMenu()">Cancel</button>
+      <button class="tsk-sec-edit-btn save" onclick="tskRotateIcsTokenDo()">Rotate</button>
+    </div>`;
+}
+async function tskRotateIcsTokenDo() {
+  try {
+    await api('/api/tasks/calendar-token?rotate=true');
+    tskCloseSnoozeMenu();
+    setTimeout(() => tskOpenIcsPanel(), 80);
+    toast('New URL minted — re-subscribe in your calendar app');
+  } catch (e) {
+    toast('Could not rotate token', 'err');
+  }
+}
 // ── End Tasks (beta) ───────────────────────────────────────────────────────
 
 </script>

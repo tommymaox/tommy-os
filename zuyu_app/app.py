@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
+import secrets
 import sqlite3
 import uuid
 from contextlib import asynccontextmanager
@@ -10,6 +12,7 @@ from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .ai_food import parse_food_with_ai
@@ -68,6 +71,154 @@ STARTED_AT = datetime.now(timezone.utc)
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# ── ICS / iCalendar helpers ──────────────────────────
+# RFC 5545 says lines should fold at 75 octets; we cap at 72 to be safe.
+_ICS_LINE_LIMIT = 72
+_ICS_RECUR_MAP = {
+    "daily":    "FREQ=DAILY",
+    "weekdays": "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+    "weekly":   "FREQ=WEEKLY",
+    "biweekly": "FREQ=WEEKLY;INTERVAL=2",
+    "monthly":  "FREQ=MONTHLY",
+}
+
+
+def _ics_escape(text: str) -> str:
+    if not text:
+        return ""
+    return (
+        text.replace("\\", "\\\\")
+        .replace("\n", "\\n")
+        .replace("\r", "")
+        .replace(",", "\\,")
+        .replace(";", "\\;")
+    )
+
+
+def _ics_fold(line: str) -> str:
+    """Fold a long ICS line at <=75 octets with CRLF + space continuation."""
+    if len(line.encode("utf-8")) <= _ICS_LINE_LIMIT:
+        return line
+    out: list[str] = []
+    buf = ""
+    for ch in line:
+        if len((buf + ch).encode("utf-8")) > _ICS_LINE_LIMIT:
+            out.append(buf)
+            buf = " " + ch  # continuation line begins with a space
+        else:
+            buf += ch
+    if buf:
+        out.append(buf)
+    return "\r\n".join(out)
+
+
+def _build_tasks_ics(tasks: list[Any], sections: dict[str, Any], tags_map: dict[str, Any]) -> str:
+    """Convert the unified Tasks store into an iCalendar feed string.
+
+    Skipped:
+      • Tasks with status == 'done' (keeps your Outlook calendar clean)
+      • Tasks without a scheduledOn date
+      • Sub-tasks that don't have their own scheduledOn (live under parent in app)
+    Recurring tasks become single VEVENTs with RRULE. Timed tasks (scheduledTime
+    set) become 30-minute events in UTC; date-only tasks become all-day events.
+    """
+    now_stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out: list[str] = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//tommy-os//Tasks//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:tommy-os Tasks",
+        "X-WR-CALDESC:Tasks from your tommy-os webapp",
+        # Hint to clients to refresh every hour. Outlook may ignore.
+        "X-PUBLISHED-TTL:PT1H",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+    ]
+    if not isinstance(tasks, list):
+        out.append("END:VCALENDAR")
+        return "\r\n".join(out) + "\r\n"
+
+    for t in tasks:
+        if not isinstance(t, dict):
+            continue
+        if (t.get("status") or "open") == "done":
+            continue
+        sched = t.get("scheduledOn")
+        if not sched or not re.match(r"^\d{4}-\d{2}-\d{2}$", str(sched)):
+            continue
+        title = (t.get("title") or "").strip()
+        if not title:
+            continue
+        tid = str(t.get("id") or secrets.token_hex(8))
+        sec = sections.get(t.get("sectionId")) if isinstance(t.get("sectionId"), str) else None
+
+        # Build description from checklist + sub-tasks + tags
+        desc_lines: list[str] = []
+        for it in (t.get("checklist") or []):
+            if isinstance(it, dict) and it.get("text"):
+                tick = "✓" if it.get("done") else "•"
+                line = f"{tick} {it['text']}"
+                if it.get("url"):
+                    line += f" — {it['url']}"
+                desc_lines.append(line)
+        subs = [s for s in tasks if isinstance(s, dict) and s.get("parentId") == tid]
+        for s in subs:
+            tick = "✓" if (s.get("status") or "open") == "done" else "•"
+            desc_lines.append(f"{tick} (sub) {s.get('title') or ''}")
+        tag_names = [
+            tags_map[tid_].get("name", "")
+            for tid_ in (t.get("tags") or [])
+            if tid_ in tags_map
+        ]
+        if tag_names:
+            desc_lines.append("Tags: " + ", ".join(tag_names))
+        if sec and sec.get("name"):
+            desc_lines.append(f"Section: {sec['name']}")
+        desc = "\n".join(line for line in desc_lines if line).strip()
+
+        # Timing
+        time = t.get("scheduledTime")
+        date_compact = sched.replace("-", "")
+        if isinstance(time, str) and re.match(r"^\d{1,2}:\d{2}$", time):
+            hh, mm = [int(x) for x in time.split(":")]
+            # Treat as Australia/Sydney local time, convert to UTC.
+            local_dt = datetime(int(sched[0:4]), int(sched[5:7]), int(sched[8:10]), hh, mm, tzinfo=timezone(timedelta(hours=10)))
+            start_utc = local_dt.astimezone(timezone.utc)
+            end_utc = start_utc + timedelta(minutes=30)
+            dtstart_line = f"DTSTART:{start_utc.strftime('%Y%m%dT%H%M%SZ')}"
+            dtend_line = f"DTEND:{end_utc.strftime('%Y%m%dT%H%M%SZ')}"
+        else:
+            # All-day event. DTEND is exclusive.
+            next_day = (datetime.strptime(sched, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y%m%d")
+            dtstart_line = f"DTSTART;VALUE=DATE:{date_compact}"
+            dtend_line = f"DTEND;VALUE=DATE:{next_day}"
+
+        event = [
+            "BEGIN:VEVENT",
+            f"UID:tsk-{tid}@tommy-os",
+            f"DTSTAMP:{now_stamp}",
+            dtstart_line,
+            dtend_line,
+            _ics_fold(f"SUMMARY:{_ics_escape(title)}"),
+        ]
+        if desc:
+            event.append(_ics_fold(f"DESCRIPTION:{_ics_escape(desc)}"))
+        if tag_names or (sec and sec.get("name")):
+            cats = ",".join(_ics_escape(x) for x in tag_names + ([sec["name"]] if sec and sec.get("name") else []))
+            event.append(_ics_fold(f"CATEGORIES:{cats}"))
+        recur = (t.get("recurring") or "").strip()
+        if recur in _ICS_RECUR_MAP:
+            event.append(f"RRULE:{_ICS_RECUR_MAP[recur]}")
+        if t.get("starred"):
+            event.append("PRIORITY:1")
+        event.append("END:VEVENT")
+        out.extend(event)
+
+    out.append("END:VCALENDAR")
+    return "\r\n".join(out) + "\r\n"
 
 
 def replace_recipe_ingredients(conn, recipe_id: str, ingredients: list[RecipeIngredientInput]) -> None:
@@ -348,6 +499,64 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 (key, value, now),
             )
             return {"ok": True}
+
+    # ── ICS calendar feed for the unified Tasks tab ──
+    # GET /api/tasks/calendar-token → { token } (generates on first call)
+    # GET /api/tasks/{token}.ics    → iCalendar text. Anyone with the URL can
+    # read your tasks, so the token is the secret. Subscribe to it from
+    # Outlook / Apple Calendar / Google Calendar.
+    @app.get("/api/tasks/calendar-token")
+    def tasks_calendar_token(rotate: bool = False):
+        token: str | None = None
+        with db_session(settings.db_path) as conn:
+            if not rotate:
+                row = conn.execute(
+                    "SELECT value FROM kb_store WHERE key = ?", ("tasks_ics_token",)
+                ).fetchone()
+                if row:
+                    try:
+                        cand = json.loads(row["value"])
+                    except Exception:
+                        cand = row["value"]
+                    if isinstance(cand, str) and cand:
+                        token = cand
+            if not token:
+                token = secrets.token_urlsafe(24)
+                conn.execute(
+                    "INSERT OR REPLACE INTO kb_store (key, value, updated_at) VALUES (?, ?, ?)",
+                    ("tasks_ics_token", json.dumps(token), utc_now_iso()),
+                )
+        return {"token": token}
+
+    @app.get("/api/tasks/{token}.ics")
+    def tasks_ics(token: str):
+        with db_session(settings.db_path) as conn:
+            row = conn.execute("SELECT value FROM kb_store WHERE key = ?", ("tasks_ics_token",)).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Calendar feed not initialised")
+            try:
+                stored = json.loads(row["value"])
+            except Exception:
+                stored = row["value"]
+            if not secrets.compare_digest(str(stored), token):
+                raise HTTPException(status_code=404, detail="Calendar feed not found")
+            data_row = conn.execute("SELECT value FROM kb_store WHERE key = ?", ("tasks_unified",)).fetchone()
+        try:
+            blob = json.loads(data_row["value"]) if data_row else {}
+        except Exception:
+            blob = {}
+        tasks = blob.get("tasks", []) if isinstance(blob, dict) else []
+        sections = {s["id"]: s for s in (blob.get("sections", []) if isinstance(blob, dict) else []) if isinstance(s, dict)}
+        tags_map = {t["id"]: t for t in (blob.get("tags", []) if isinstance(blob, dict) else []) if isinstance(t, dict)}
+        ics_text = _build_tasks_ics(tasks, sections, tags_map)
+        return PlainTextResponse(
+            ics_text,
+            media_type="text/calendar; charset=utf-8",
+            headers={
+                "Cache-Control": "no-cache, max-age=0",
+                "Content-Disposition": 'inline; filename="tommy-os-tasks.ics"',
+            },
+        )
 
     @app.post("/api/food/ai/parse")
     def parse_food_description(payload: FoodAiParseInput, request: Request):
