@@ -528,7 +528,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
         return {"token": token}
 
-    @app.get("/api/tasks/{token}.ics")
+    @app.api_route("/api/tasks/{token}.ics", methods=["GET", "HEAD"])
     def tasks_ics(token: str):
         with db_session(settings.db_path) as conn:
             row = conn.execute("SELECT value FROM kb_store WHERE key = ?", ("tasks_ics_token",)).fetchone()
