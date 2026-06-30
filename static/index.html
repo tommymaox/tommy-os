@@ -16358,7 +16358,7 @@ function _tskRowHtml(t, opts) {
       ${meta.length ? `<div class="tsk-task-meta">${meta.join('')}</div>` : ''}
     </div>
     <div class="tsk-task-acts">
-      <button class="tsk-task-add-sub" onclick="event.stopPropagation();tskInlineSubStart('${t.id}')" title="Add sub-task">+ sub</button>
+      <button class="tsk-task-add-sub" onclick="event.stopPropagation();tskInlineSubStart('${t.id}')" title="Add sub-task">+</button>
       <button class="tsk-act-btn${t.starred?' starred':''}" onclick="event.stopPropagation();tskToggleStar('${t.id}')" title="Star">★</button>
       <button class="tsk-act-btn" onclick="event.stopPropagation();tskOpenSnoozeMenu(event,'${t.id}')" title="Snooze">⏰</button>
       <button class="tsk-act-btn" onclick="event.stopPropagation();tskDeleteTask('${t.id}')" title="Delete">✕</button>
